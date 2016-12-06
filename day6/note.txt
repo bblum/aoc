@@ -1,0 +1,5 @@
+I was stupid and should have thought of the following shell one liner:
+
+input=`cat input.txt`; for i in `seq 8`; do echo "$input" | cut -c$i | sort | uniq -c | sort -n | tail -n 1; done
+
+Simply switch to head -n 1 for part 2.
