@@ -28,17 +28,20 @@ int main(int argc, char **argv)
 
 		if (argv[1][i] == argv[1][i-2] &&
 		    argv[1][i-1] != argv[1][i-2]) {
-			struct aba new = { .a = a, .b = b, .bracket = brackets > 0 };
+			struct aba new;
 			if (brackets > 0) {
-				a = argv[1][i-1];
-				b = argv[1][i];
+				new.bracket = true;
+				new.a = argv[1][i-1];
+				new.b = argv[1][i];
 			} else {
-				a = argv[1][i];
-				b = argv[1][i-1];
+				new.bracket = false;
+				new.a = argv[1][i];
+				new.b = argv[1][i-1];
 			}
 			int i; struct aba *p;
 			ARRAY_LIST_FOREACH(&abas, i, p) {
-				if (p->a == a && p->b == b && p->bracket != new.bracket) {
+				if (p->a == new.a && p->b == new.b &&
+				    p->bracket != new.bracket) {
 					printf("yes\n");
 					return 0;
 				}
