@@ -1,173 +1,168 @@
-// NB. May require "ulimit -s unlimited".
-
 #include <assert.h>
-#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "common.h"
-#include "array_list.h"
 
-#if 1
+#define PART 2
+
+/**** Test input ****/
+#if (PART == 0)
 #define ELTS 2
 #define FLOORS 4
-struct state { int elevator; int generators[ELTS]; int chips[ELTS]; };
-struct state initial_state = { .elevator = 0, .generators = {1,2}, .chips = {0,0} };
+#define DIMENSIONS [FLOORS][FLOORS][FLOORS][FLOORS][FLOORS]
 
-struct memo { bool visited; bool computed; int result; };
-struct memo states[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS];
+#define G_NOBE(e,g,c) (&(graph [(e)][(g)[0]][(g)[1]][(c)[0]][(c)[1]]))
 
-#define MEMO(s) (&(states \
-		  [(s)->elevator] \
-		  [(s)->generators[0]] \
-		  [(s)->generators[1]] \
-		  [(s)->chips[0]] \
-		  [(s)->chips[1]]))
-#else
+#define INIT_NOBE (&graph[0][1][2][0][0])
+#define INIT_GENS {1,2}
+#define INIT_CHIPS {0,0}
+#define GOAL_NOBE (&graph[3][3][3][3][3])
+#define GOAL_GENS {3,3}
+
+/**** Part 1 ****/
+#elif (PART == 1)
 #define ELTS 5
 #define FLOORS 4
-
-struct state { int elevator; int generators[ELTS]; int chips[ELTS]; };
-struct state initial_state = { .elevator = 0, .generators = {0,0,0,0,0}, .chips = {1,0,1,0,0} };
-
-struct memo { bool visited; bool computed; int result; };
-struct memo states[FLOORS]
+#define DIMENSIONS [FLOORS] \
+		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS] \
 		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS]
-		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS];
 
-#define MEMO(s) (&(states \
-		  [(s)->elevator] \
-		  [(s)->generators[0]] \
-		  [(s)->generators[1]] \
-		  [(s)->generators[2]] \
-		  [(s)->generators[3]] \
-		  [(s)->generators[4]] \
-		  [(s)->chips[0]] \
-		  [(s)->chips[1]] \
-		  [(s)->chips[2]] \
-		  [(s)->chips[3]] \
-		  [(s)->chips[4]]))
+#define G_NOBE(e,g,c) (&(graph [(e)] \
+                         [(g)[0]][(g)[1]][(g)[2]][(g)[3]][(g)[4]] \
+                         [(c)[0]][(c)[1]][(c)[2]][(c)[3]][(c)[4]]))
+
+#define INIT_NOBE (&graph[0] [0][0][0][0][0] [1][0][1][0][0])
+#define INIT_GENS {0,0,0,0,0}
+#define INIT_CHIPS {1,0,1,0,0}
+#define GOAL_NOBE (&graph[3] [3][3][3][3][3] [3][3][3][3][3])
+#define GOAL_GENS {3,3,3,3,3}
+
+/**** Part 2 ****/
+#elif (PART == 2)
+#define ELTS 7
+#define FLOORS 4
+
+#define DIMENSIONS [FLOORS] \
+		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS][FLOORS][FLOORS] \
+		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS][FLOORS][FLOORS]
+
+#define G_NOBE(e,g,c) (&(graph [(e)] \
+                         [(g)[0]][(g)[1]][(g)[2]][(g)[3]][(g)[4]][(g)[5]][(g)[6]] \
+                         [(c)[0]][(c)[1]][(c)[2]][(c)[3]][(c)[4]][(c)[5]][(c)[6]]))
+
+#define INIT_NOBE (&graph[0] [0][0][0][0][0][0][0] [1][0][1][0][0][0][0])
+#define INIT_GENS {0,0,0,0,0,0,0}
+#define INIT_CHIPS {1,0,1,0,0,0,0}
+#define GOAL_NOBE (&graph[3] [3][3][3][3][3][3][3] [3][3][3][3][3][3][3])
+#define GOAL_GENS {3,3,3,3,3,3,3}
 #endif
 
-void print_state(struct state *state, char *buf, int buflen)
-{
-	int pos = snprintf(buf, buflen, "%d", state->elevator);
-	for (int i = 0; i < ELTS; i++) {
-		pos += snprintf(buf+pos, buflen-pos, "%d", state->generators[i]);
-		pos += snprintf(buf+pos, buflen-pos, "%d", state->chips[i]);
-	}
-}
+#define G(s) G_NOBE((s)->elevator, (s)->gens, (s)->chips)
+#define GOAL_CHIPS GOAL_GENS
 
-bool goal_state(struct state *state) {
-	if (state->elevator != FLOORS-1) return false;
-	for (int i = 0; i < ELTS; i++)
-		if (state->generators[i] != FLOORS-1 || state->chips[i] != FLOORS-1)
-			return false;
-	return true;
-}
+struct state {
+	char elevator;
+	char gens[ELTS];
+	char chips[ELTS];
+	struct state *next;
+};
+
+struct move { int to_floor; bool bring_gen[ELTS]; bool bring_chip[ELTS]; };
+
+struct state_nobe {
+	char distance;
+	char visited; // 0: unvisited; 1: visited fwds; 2: visited reverse
+};
+
+struct state_nobe graph DIMENSIONS;
 
 bool illegal_state(struct state *state) {
 	for (int i = 0; i < ELTS; i++)
-		if (state->chips[i] != state->generators[i])
+		if (state->chips[i] != state->gens[i])
 			for (int j = 0; j < ELTS; j++)
-				if (i != j && state->chips[i] == state->generators[j])
+				if (i != j && state->chips[i] == state->gens[j])
 					return true;
 	return false;
 }
 
-struct move { int to_floor; bool bring_generator[ELTS]; bool bring_chip[ELTS]; };
-typedef ARRAY_LIST(struct move) movelist_t;
-
-void get_moves(struct state *state, movelist_t *moves)
+void foreach_move(struct state *state, void (*f)(struct move *arg))
 {
 	int items_on_floor = 0;
 	for (int i = 0; i < ELTS; i++) {
-		if (state->elevator == state->generators[i]) items_on_floor++;
-		if (state->elevator == state->chips[i])      items_on_floor++;
+		if (state->elevator == state->gens[i])  items_on_floor++;
+		if (state->elevator == state->chips[i]) items_on_floor++;
 	}
 
-	void add_moves(int to_floor, int num_items_to_bring)
-	{
-		for (int subset = 0; subset < (1 << items_on_floor); subset++) {
-			if (__builtin_popcount(subset) != num_items_to_bring) continue;
+	for (int to_floor = 0; to_floor < FLOORS; to_floor++) {
+		if (to_floor != state->elevator - 1 &&
+		    to_floor != state->elevator + 1) continue;
+		for (int subset = 1; subset < (1 << items_on_floor); subset++) {
+			if (__builtin_popcount(subset) > 2) continue;
 			struct move move = { .to_floor = to_floor };
 			for (int i = 0, item_id = 0; i < ELTS; i++) {
-				if (state->elevator == state->generators[i])
-					move.bring_generator[i] = ((subset >> item_id++) & 1) != 0;
+				if (state->elevator == state->gens[i])
+					move.bring_gen[i] =
+						((subset >> item_id++) & 1) != 0;
 				if (state->elevator == state->chips[i])
-					move.bring_chip[i] = ((subset >> item_id++) & 1) != 0;
+					move.bring_chip[i] =
+						((subset >> item_id++) & 1) != 0;
 			}
-			ARRAY_LIST_APPEND(moves, move);
+			f(&move);
 		}
 	}
-
-	// prefer going up to going down
-	if (state->elevator != FLOORS - 1) {
-		// prefer taking more items up to fewer
-		add_moves(state->elevator + 1, 2);
-		add_moves(state->elevator + 1, 1);
-	}
-	if (state->elevator != 0) {
-		// prefer taking fewer items down to more
-		add_moves(state->elevator - 1, 1);
-		add_moves(state->elevator - 1, 2);
-	}
 }
 
-void apply_move(struct state *state, struct move *move, struct state *result)
+struct state *apply_move(struct state *state, struct move *m)
 {
-	memcpy(result, state, sizeof(*state));
+	struct state s2;
 	for (int i = 0; i < ELTS; i++) {
-		if (move->bring_generator[i]) result->generators[i] = move->to_floor;
-		if (move->bring_chip[i])      result->chips[i]      = move->to_floor;
+		s2.gens[i]  = m->bring_gen[i]  ? m->to_floor : state->gens[i];
+		s2.chips[i] = m->bring_chip[i] ? m->to_floor : state->chips[i];
 	}
-	result->elevator = move->to_floor;
-}
+	s2.elevator = m->to_floor;
+	s2.next = NULL;
 
-#define UNSOLVABLE 32768
-bool search (struct state *state, int *result)
-{
-	if (illegal_state(state)) return false;
+	if (illegal_state(&s2)) {
+		return NULL;
+	} else if (G(state)->visited + G(&s2)->visited == 3) {
+		printf("%d\n", G(state)->distance + G(&s2)->distance + 1);
+		exit(0);
+	} else if (G(&s2)->visited != 0) {
+		assert(G(&s2)->distance <= G(state)->distance + 1);
+		return NULL;
+	} else {
+		struct state *result = malloc(sizeof(struct state));
+		memcpy(result, &s2, sizeof(s2));
 
-	struct memo *memo = MEMO(state);
-
-	if (memo->visited) {
-		*result = memo->result;
-		return memo->computed; // don't go in cycles
+		G(result)->distance = G(state)->distance + 1;
+		G(result)->visited  = G(state)->visited;
+		return result;
 	}
-	assert(!memo->visited && !memo->computed);
-	memo->visited = true;
-	if (goal_state(state)) {
-		memo->result = *result = 0;
-		return memo->computed = true;
-	}
-
-	static int nobes = 0;
-	if ((++nobes % 1000000) == 0) { printf("searching %dth state\n", nobes); }
-
-	// search
-	int best = UNSOLVABLE;
-	movelist_t moves;
-	ARRAY_LIST_INIT(&moves, 4096);
-	get_moves(state, &moves);
-	int i; struct move *move;
-	ARRAY_LIST_FOREACH(&moves, i, move) {
-		struct state state2; int result2;
-		apply_move(state, move, &state2);
-		if (search(&state2, &result2) && result2 < best) best = result2;
-	}
-
-	// record result
-	ARRAY_LIST_FREE(&moves);
-	memo->result = *result = best + 1;
-	return memo->computed = true;
 }
 
 int main(int argc, char **argv)
 {
-	int result;
-	search(&initial_state, &result);
-	printf("%d\n", result);
-	return 0;
+	struct state goal = { .elevator = 3, .gens = GOAL_GENS,
+	                      .chips = GOAL_CHIPS, .next = NULL };
+	GOAL_NOBE->distance = 0;
+	GOAL_NOBE->visited = 2;
+	struct state init = { .elevator = 0, .gens = INIT_GENS,
+	                      .chips = INIT_CHIPS, .next = &goal };
+	INIT_NOBE->distance = 0;
+	INIT_NOBE->visited = 1;
+
+	for (struct state *head = &init, *tail = &goal; head != NULL;) {
+		struct state *s = head;
+		void fnbrs(struct move *m) {
+			struct state *s2;
+			if ((s2 = apply_move(s, m)) != NULL) {
+				tail = tail->next = s2;
+			}
+		}
+		foreach_move(s, fnbrs);
+		head = head->next;
+		if (s != &init && s != &goal) free(s);
+	}
+	return -1;
 }
