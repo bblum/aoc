@@ -8,12 +8,10 @@
 
 /**** Test input ****/
 #if (PART == 0)
-#define ELTS 2
+#define ELEMENTS 2
 #define FLOORS 4
 #define DIMENSIONS [FLOORS][FLOORS][FLOORS][FLOORS][FLOORS]
-
 #define G_NOBE(e,g,c) (&(graph [(e)][(g)[0]][(g)[1]][(c)[0]][(c)[1]]))
-
 #define INIT_NOBE (&graph[0][1][2][0][0])
 #define INIT_GENS {1,2}
 #define INIT_CHIPS {0,0}
@@ -22,16 +20,14 @@
 
 /**** Part 1 ****/
 #elif (PART == 1)
-#define ELTS 5
+#define ELEMENTS 5
 #define FLOORS 4
 #define DIMENSIONS [FLOORS] \
 		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS] \
 		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS]
-
 #define G_NOBE(e,g,c) (&(graph [(e)] \
                          [(g)[0]][(g)[1]][(g)[2]][(g)[3]][(g)[4]] \
                          [(c)[0]][(c)[1]][(c)[2]][(c)[3]][(c)[4]]))
-
 #define INIT_NOBE (&graph[0] [0][0][0][0][0] [1][0][1][0][0])
 #define INIT_GENS {0,0,0,0,0}
 #define INIT_CHIPS {1,0,1,0,0}
@@ -40,17 +36,14 @@
 
 /**** Part 2 ****/
 #elif (PART == 2)
-#define ELTS 7
+#define ELEMENTS 7
 #define FLOORS 4
-
 #define DIMENSIONS [FLOORS] \
 		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS][FLOORS][FLOORS] \
 		[FLOORS][FLOORS][FLOORS][FLOORS][FLOORS][FLOORS][FLOORS]
-
 #define G_NOBE(e,g,c) (&(graph [(e)] \
                          [(g)[0]][(g)[1]][(g)[2]][(g)[3]][(g)[4]][(g)[5]][(g)[6]] \
                          [(c)[0]][(c)[1]][(c)[2]][(c)[3]][(c)[4]][(c)[5]][(c)[6]]))
-
 #define INIT_NOBE (&graph[0] [0][0][0][0][0][0][0] [1][0][1][0][0][0][0])
 #define INIT_GENS {0,0,0,0,0,0,0}
 #define INIT_CHIPS {1,0,1,0,0,0,0}
@@ -63,24 +56,19 @@
 
 struct state {
 	char elevator;
-	char gens[ELTS];
-	char chips[ELTS];
+	char gens[ELEMENTS];
+	char chips[ELEMENTS];
 	struct state *next;
 };
 
-struct move { int to_floor; bool bring_gen[ELTS]; bool bring_chip[ELTS]; };
+struct move { int to_floor; bool bring_gen[ELEMENTS]; bool bring_chip[ELEMENTS]; };
 
-struct state_nobe {
-	char distance;
-	char visited; // 0: unvisited; 1: visited fwds; 2: visited reverse
-};
-
-struct state_nobe graph DIMENSIONS;
+struct { char distance; char visited; } graph DIMENSIONS;
 
 bool illegal_state(struct state *state) {
-	for (int i = 0; i < ELTS; i++)
+	for (int i = 0; i < ELEMENTS; i++)
 		if (state->chips[i] != state->gens[i])
-			for (int j = 0; j < ELTS; j++)
+			for (int j = 0; j < ELEMENTS; j++)
 				if (i != j && state->chips[i] == state->gens[j])
 					return true;
 	return false;
@@ -89,7 +77,7 @@ bool illegal_state(struct state *state) {
 void foreach_move(struct state *state, void (*f)(struct move *arg))
 {
 	int items_on_floor = 0;
-	for (int i = 0; i < ELTS; i++) {
+	for (int i = 0; i < ELEMENTS; i++) {
 		if (state->elevator == state->gens[i])  items_on_floor++;
 		if (state->elevator == state->chips[i]) items_on_floor++;
 	}
@@ -100,7 +88,7 @@ void foreach_move(struct state *state, void (*f)(struct move *arg))
 		for (int subset = 1; subset < (1 << items_on_floor); subset++) {
 			if (__builtin_popcount(subset) > 2) continue;
 			struct move move = { .to_floor = to_floor };
-			for (int i = 0, item_id = 0; i < ELTS; i++) {
+			for (int i = 0, item_id = 0; i < ELEMENTS; i++) {
 				if (state->elevator == state->gens[i])
 					move.bring_gen[i] =
 						((subset >> item_id++) & 1) != 0;
@@ -116,7 +104,7 @@ void foreach_move(struct state *state, void (*f)(struct move *arg))
 struct state *apply_move(struct state *state, struct move *m)
 {
 	struct state s2;
-	for (int i = 0; i < ELTS; i++) {
+	for (int i = 0; i < ELEMENTS; i++) {
 		s2.gens[i]  = m->bring_gen[i]  ? m->to_floor : state->gens[i];
 		s2.chips[i] = m->bring_chip[i] ? m->to_floor : state->chips[i];
 	}
