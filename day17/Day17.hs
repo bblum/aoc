@@ -1,28 +1,20 @@
-import Data.List
-import Data.Maybe
-import Data.Char
 import Crypto.Hash.MD5
 import Data.ByteString.Char8 (pack, unpack)
 import Data.ByteString.Base16 (encode)
+import Data.List
+import Data.Maybe
+import Control.Monad
+import Control.Arrow
 
-filterdirs (x,y) =
-    let f1 = if y == 0 then filter (/= 'U') else id
-        f2 = if x == 0 then filter (/= 'L') else id
-        f3 = if x == 3 then filter (/= 'R') else id
-        f4 = if y == 3 then filter (/= 'D') else id
-    in f1 . f2 . f3 . f4
+nbrs (_,path) = map fst $ filter (flip elem "bcdef" . snd) $ zip "UDLR" $ unpack $ encode $ hash $ pack $ "udskfozm" ++ path
 
-nbrs (3,3) _ = []
-nbrs (x,y) path = filterdirs (x,y) $ map fst $ filter (flip elem "bcdef" . snd) $ zip "UDLR" $ take 4 $ unpack $ encode $ hash $ pack $ "udskfozm" ++ path
+step ((3,3),path) dir = Nothing
+step ((x,y),path) 'U' = guard (y /= 0) >> Just ((x,y-1), path ++ "U")
+step ((x,y),path) 'D' = guard (y /= 3) >> Just ((x,y+1), path ++ "D")
+step ((x,y),path) 'L' = guard (x /= 0) >> Just ((x-1,y), path ++ "L")
+step ((x,y),path) 'R' = guard (x /= 3) >> Just ((x+1,y), path ++ "R")
 
-move 'U' (x,y) = (x,y-1)
-move 'R' (x,y) = (x+1,y)
-move 'L' (x,y) = (x-1,y)
-move 'D' (x,y) = (x,y+1)
+result = snd . fromJust . find ((== (3,3)) . fst) . fromJust . find (any ((== (3,3)) . fst))
 
-step (pos,path) = map (\dir -> (move dir pos, path ++ [dir])) $ nbrs pos path
-
--- part 1
--- main = print $ find (any ((== (3,3) . fst))) $ iterate (concatMap step) [((0,0),"")]
--- part 2
-main = print $ find (any ((== (3,3)) . fst)) $ reverse $ takeWhile (not . null) $ iterate (concatMap step) [((0,0),"")]
+main = print $ (result &&& length . result . reverse . takeWhile (not . null))
+                $ iterate (concatMap $ liftM2 mapMaybe step nbrs) [((0,0),"")]
