@@ -1,6 +1,9 @@
-steal l = let newl = filter (/= (l !! div (length l) 2)) l -- kill an elf
-          in drop 1 newl ++ take 1 newl -- rotate killer to the back
+import qualified Data.Sequence as S
 
-solve n = head $ until ((==1) . length) steal [1..n]
+steal l = let index = div (S.length l) 2
+              newl = S.take index l S.>< S.drop (index+1) l
+          in S.drop 1 newl S.>< S.take 1 newl
 
-main = print $ zip [1..] $ map solve [1..100]
+solve n = flip S.index 0 $ until ((==1) . length) steal $ S.fromList [1..n]
+
+main = print $ solve 3012210
