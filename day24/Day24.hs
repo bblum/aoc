@@ -1,13 +1,23 @@
+{-# LANGUAGE FlexibleContexts #-}
 import Data.List
 import Data.Maybe
+import Control.Monad.State
+import Control.Arrow
 
-graph =
-    [([0,1],198), ([0,2], 16), ([0,3],178), ([0,4], 28), ([0,5], 64), ([0,6],246), ([0,7],226),
-     ([1,2],206), ([1,3], 56), ([1,4],214), ([1,5],234), ([1,6], 56), ([1,7], 36),
-     ([2,3],194), ([2,4], 36), ([2,5], 80), ([2,6],254), ([2,7],234),
-     ([3,4],194), ([3,5],214), ([3,6], 72), ([3,7], 64),
-     ([4,5], 68), ([4,6],262), ([4,7],242),
-     ([5,6],282), ([5,7],262),
-     ([6,7], 36)]
+graph input = ([ ([a,b], distance (xys !! a) (xys !! b)) | a <- ns, b <- ns, a < b], last ns)
+    where (ns, xys) = unzip $ catMaybes $ takeWhile isJust $ map coord ['0'..]
+          coord c = do y <- findIndex (any (== c)) input
+                       x <- findIndex (== c) $ input !! y
+                       return (read [c], (x,y))
+          distance start goal = evalState (bfs 0 goal [start]) [start]
+          bfs n goal ps = if any (== goal) ps then return n
+                          else bfs (n+1) goal =<< concat <$> mapM fnbrs ps
+          fnbrs (x0,y0) = catMaybes <$> mapM try [(x0-1,y0),(x0+1,y0),(x0,y0-1),(x0,y0+1)]
+          try pos@(x,y) = do visited <- get
+                             if input !! y !! x == '#' || elem pos visited then return Nothing
+                             else modify (pos:) >> return (Just pos)
 
-main = print $ minimum $ map (sum . map (fromJust . flip lookup graph) . map (sort . take 2) . drop 2 . reverse . tails . (++[0]) . (0:)) $ permutations [1..7]
+solve endpath (g,n) = minimum $ map (cost . endpath . (0:)) $ permutations [1..n]
+    where cost p = sum $ map (fromJust . flip lookup g) $ zipWith (\a b -> sort [a,b]) p $ tail p
+
+main = interact $ show . (solve id &&& solve (++[0])) . graph . lines
