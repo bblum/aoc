@@ -7,9 +7,4 @@ import Control.Monad.State
 import Control.Arrow
 import Debug.Trace
 
-checksum (x:xs) =
-    case find (\y -> mod y x == 0) xs of
-        Just y -> div y x
-        Nothing -> checksum xs
-
-main = interact $ (++"\n") . show . sum . map checksum . map (sort . map read . words) . lines
+main = interact $ (++"\n") . show . sum . map ((\l -> head [div y x | x <- l, y <- l, x < y, mod y x == 0]) . map read . words) . lines
