@@ -10,7 +10,7 @@ step (x,y) S  = (x,  y-2)
 step (x,y) SW = (x-1,y-1)
 step (x,y) NW = (x-1,y+1)
 
-dist (x,y) = div (abs x + abs y) 2
+dist (x,y) = div (abs x + abs y + max 0 (abs x - abs y)) 2
 
 main = print $ (last &&& maximum) $ map dist $ scanl step (0,0) input
 
