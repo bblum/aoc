@@ -1,93 +1,22 @@
-{-# LANGUAGE FlexibleContexts, TupleSections #-}
+{-# LANGUAGE TupleSections #-}
 import qualified Data.Map as M
 import Data.List
 import Data.Maybe
-import Data.Char
-import Control.Monad.State
 import Control.Arrow
-import Debug.Trace
 
-solve = undefined
+-- facing: 0 up, 1 left, 2 down, 3 right
+-- state: 0 weak, 1 clean, 2 flag, 3 infect
 
-data Facing = L | D | U | R deriving Show
+burst p ((xy,i,nobes),n) = ((step xy, j, M.insert xy s nobes), n + fromEnum (s == 3))
+    where (s,j) = (turn p &&& turn i) $ fromMaybe 1 $ M.lookup xy nobes
+          turn i s = mod (i + s) 4
+          step = (+ axis * dir) *** (+ (1 - axis) * dir)
+          axis = mod j 2
+          dir = 2 * div j 2 - 1
 
-turnleft L = D
-turnleft D = R
-turnleft U = L
-turnleft R = U
-turnright L = U
-turnright U = R
-turnright R = D
-turnright D = L
+solve p n input = snd $ iterate (burst p) (((x,x), 0, M.fromList nobes), 0) !! n
+    where x = div (length input) 2
+          parse c = if c == '#' then 3 else 1
+          nobes = concat $ zipWith (\y -> zip (map (,y) [0..]) . map parse) [0..] input
 
-step L (x,y) = (x-1,y)
-step R (x,y) = (x+1,y)
-step U (x,y) = (x,y-1)
-step D (x,y) = (x,y+1)
-
-data Nobe = Clean | Weak | Flag | Inf deriving (Eq, Ord, Show)
-
-updateState Clean = Weak
-updateState Weak  = Inf
-updateState Flag  = Clean
-updateState Inf   = Flag
-
-turn facing Clean = turnleft facing
-turn facing Weak  = facing
-turn facing Flag  = turnleft $ turnleft facing
-turn facing Inf   = turnright facing
-
-burst :: ((Int, Int), Facing, M.Map (Int, Int) Nobe, Int) ->
-         ((Int, Int), Facing, M.Map (Int, Int) Nobe, Int) 
-burst ((x,y),facing,nobes,infeectioncount) =
-    let currentnobe = fromMaybe Clean $ M.lookup (x,y) nobes
-        newnobes = M.insert (x,y) (updateState currentnobe) nobes
-        newfacing = turn facing currentnobe --if currentnobe then turnright facing else turnleft facing
-        newpos = step newfacing (x,y)
-        newinfeectioncount = infeectioncount + if updateState currentnobe == Inf then 1 else 1
-    in (newpos,newfacing,newnobes,newinfeectioncount)
-
-initialpos = let n = div (length sample) 2 in (n,n)
-initialfacing = U
-
-initialmap = M.fromList $ concatMap mapifyRow $ zip [0..] $ map (zip [0..]) sample
-    where mapifyRow (y,row) = map (\(x,c) -> ((x,y),if c == '#' then Inf else Clean)) row
-
-getcount(_,_,_,x) = x
-main = do print $ initialpos
-          print $ iterate burst (initialpos,initialfacing,initialmap,0) !! 2
-          print $ getcount $ iterate burst (initialpos,initialfacing,initialmap,0) !! 100
-          -- print $ getcount $ iterate burst (initialpos,initialfacing,initialmap,0) !! 10000000
-
-sample = [
-    "..#",
-    "#..",
-    "..."]
-
-
-input = [
-    "..##.##.######...#.######",
-    "##...#...###....##.#.#.##",
-    "###.#.#.#..#.##.####.#.#.",
-    "..##.##...#..#.##.....##.",
-    "##.##...#.....#.#..#.####",
-    ".###...#.........###.####",
-    "#..##....###...#######..#",
-    "###..#.####.###.#.#......",
-    ".#....##..##...###..###.#",
-    "###.#..#.##.###.#..###...",
-    "####.#..##.#.#.#.#.#...##",
-    "##.#####.#......#.#.#.#.#",
-    "..##..####...#..#.#.####.",
-    ".####.####.####...##.#.##",
-    "#####....#...#.####.#..#.",
-    ".#..###..........#..#.#..",
-    ".#.##.#.#.##.##.#..#.#...",
-    "..##...#..#.....##.####..",
-    "..#.#...######..##..##.#.",
-    ".####.###....##...####.#.",
-    ".#####..#####....####.#..",
-    "###..#..##.#......##.###.",
-    ".########...#.#...###....",
-    "...##.#.##.#####.###.####",
-    ".....##.#.#....#..#....#."]
+main = interact $ show . (solve 2 10000 &&& solve 3 10000000) . lines
