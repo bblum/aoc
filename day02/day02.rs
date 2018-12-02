@@ -1,12 +1,10 @@
 use std::fs::File;
 use std::io::Read;
 
-fn anyn(noob: &str, n: usize) -> bool {
-    "abcdefghijklmnopqrstuvwxyz".chars().any(|x| noob.chars().filter(|c| *c == x).count() == n)
-}
-
 fn countn(input: &String, n: usize) -> usize {
-    input.lines().filter(|line| anyn(line, n)).count()
+    input.lines().filter(|line| {
+        line.chars().any(|x| line.chars().filter(|c| *c == x).count() == n)
+    }).count()
 }
 
 fn main() {
