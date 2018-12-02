@@ -1,15 +1,11 @@
-{-# LANGUAGE FlexibleContexts, TupleSections #-}
-import qualified Data.Map as M
-import Data.List
-import Data.Maybe
-import Data.Char
-import Control.Monad.State
-import Control.Arrow
-import Debug.Trace
+import Data.Map ((!),update,fromList)
 
--- part1 x = Just (x+1)
-part2 x = if x >= 3 then Just (x-1) else Just (x+1)
+part1 x = Just $ x + 1
+part2 x = Just $ if x >= 3 then x - 1 else x + 1
 
-step n i p = if i >= length p then n else step (n+1) (i + (p M.! i)) (M.update part2 i p)
+exec n i p = if i >= length p then n else exec (n + 1) (i + p ! i) (update part2 i p)
 
-main = interact $ (++"\n") . show . step 0 0 . M.fromList . zip [0..] . map read . lines
+main = do input <- readFile "input.txt"
+          print $ exec 0 0 $ fromList $ zip [0..] $ map read $ lines input
+
+

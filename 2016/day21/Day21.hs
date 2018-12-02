@@ -14,9 +14,7 @@ parse1 input ["swap","letter",[x],_,_,[y]] = insert (key x input) y $ insert (ke
 parse1 input ["rotate",_,_,_,_,_,[x]]      = rotate input x $ fromList $ zip [0..] permutation
 parse1 input ["rotate","left", n,_]        = mapKeys (\k -> (k - read n) `mod` size input) input
 parse1 input ["rotate","right",n,_]        = mapKeys (\k -> (k + read n) `mod` size input) input
-parse1 input ["reverse",_,n,_,m]           = fromList $ pfx ++ zip (reverse ks) vs ++ sfx
-    where (pfx,(mid,sfx)) = splitAt (read m - read n + 1) <$>  splitAt (read n) (toList input)
-          (ks,vs) = unzip mid
+parse1 input ["reverse",_,n,_,m]           = mapKeys (\k -> fromMaybe k $ (read m -) <$> elemIndex k [read n..read m]) input
 parse1 input ["move",_,n,_,_,m]            = fromList $ zip [0..] $ pfx ++ [input ! read n] ++ sfx
     where (pfx,sfx) = splitAt (read m) $ filter (/= input ! read n) $ snd $ unzip $ toList input
 

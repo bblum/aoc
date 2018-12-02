@@ -42,4 +42,4 @@ graph = map (swap *** id) graph0 ++ graph0
 
 cost path = sum $ map (fromJust . flip lookup graph) $ zip path $ tail path
 
-main = print $ (minimum &&& maximum)  $ map cost $ permutations $ nub $ map (fst . fst) $ map (swap *** id) graph ++ graph
+main = print $ (minimum &&& maximum)  $ map cost $ permutations $ nub $ map (fst . fst) $ graph

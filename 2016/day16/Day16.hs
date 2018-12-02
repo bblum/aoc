@@ -2,7 +2,7 @@ import Data.List
 import Data.List.Extra
 import Data.Char
 
-dragon x = x ++ [False] ++ (map not $ reverse x)
+dragon x = x ++ [False] ++ map not (reverse x)
 
 stuff n = take n $ until ((>= n) . length) dragon $ map (== '1') "10001110011110000"
 
