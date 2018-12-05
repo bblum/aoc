@@ -1,29 +1,13 @@
-{-# LANGUAGE FlexibleContexts, TupleSections, MonadComprehensions #-}
-import qualified Data.Map as M
-import qualified Data.Set as S
 import Data.List
-import Data.Maybe
 import Data.Char
-import Control.Monad.State
-import Control.Arrow
-import Debug.Trace
 
-solve = undefined
+react (x:y:p) = if x /= y && toUpper x == toUpper y then react p else x:(react (y:p))
+react p = p
 
-react [] = []
-react [y] = [y]
-react (x:y:rest) =
-    if x /= y && toUpper x == toUpper y then react rest else x:(react (y:rest))
+reduce p = let q = react p in if q == p then q else reduce q
 
-reactlots foo =
-    let bar = react foo in if length bar == length foo then bar else reactlots bar
+remove input noob = filter (\c -> c /= noob && c /= toUpper noob) input
 
-remove input noob = reactlots $ filter (\x -> x /= noob && x /= toUpper noob) input
-
-main = do input <- filter (/= '\n') <$> readFile "input.txt"
-          -- print $ reactlots input
-          print $ length $ reactlots input
-          let result = map (remove input) "abcdefghijklmonpqrstuvwxyz"
-          print $ map length result
-          print $ minimum $ map length result
-
+main = do input <- head <$> lines <$> readFile "input.txt"
+          print $ length $ reduce input
+          print $ minimum $ map (length . reduce . remove input) "abcdefghijklmonpqrstuvwxyz"
