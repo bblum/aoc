@@ -12,7 +12,9 @@ closest p = if d == d2 then -1 else nobe
 
 area nobe = length $ filter (== nobe) $ map closest grid
 
-part1 = last $ sort $ map area $ [0..length input] \\ map closest [ (x,y) | (x,y) <- grid, elem x [0,maxx] || elem y [0,maxy] ]
+infinites = map closest [ (x,y) | (x,y) <- grid, elem x [0,maxx] || elem y [0,maxy] ]
+
+part1 = last $ sort $ map area $ [0..length input] \\ infinites
 
 region p = sum (map (distance p) input) < 10000
 
