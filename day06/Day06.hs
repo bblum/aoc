@@ -7,7 +7,7 @@ grid = [ (x,y) | x <- [0..maxx], y <- [0..maxy] ]
 
 distance (x0,y0) (x1,y1) = abs (x0-x1) + abs (y1-y0)
 
-closest p = if d == d2 then 0 else nobe
+closest p = if d == d2 then -1 else nobe
     where (nobe,d):(_,d2):_ = sortBy (comparing snd) $ map (fmap (distance p)) $ zip [0..] input
 
 area nobe = length $ filter (== nobe) $ map closest grid
