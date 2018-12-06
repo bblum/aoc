@@ -1,56 +1,24 @@
-{-# LANGUAGE FlexibleContexts, TupleSections, MonadComprehensions #-}
-import qualified Data.Map as M
-import qualified Data.Set as S
 import Data.List
-import Data.Maybe
-import Data.Char
 import Data.Ord
-import Control.Monad.State
-import Control.Arrow
-import Debug.Trace
+
+maxx = maximum $ map fst input
+maxy = maximum $ map snd input
+grid = [ (x,y) | x <- [0..maxx], y <- [0..maxy] ]
 
 distance (x0,y0) (x1,y1) = abs (x0-x1) + abs (y1-y0)
 
-safe input (x,y) =
-    let distances = map (\(coord,id) -> (id,distance coord (x,y))) $ zip input [0..]
-    in if (sum (map snd distances) < 10000) then 1 else 0
+closest p = if d == d2 then 0 else nobe
+    where (nobe,d):(_,d2):_ = sortBy (comparing snd) $ map (fmap (distance p)) $ zip [0..] input
 
-closestnoob input (x,y) =
-    let distances = map (\(coord,id) -> (id,distance coord (x,y))) $ zip input [0..]
-        closestiddist = minimumBy (comparing snd) $ map (\(coord,id) -> (id,distance coord (x,y))) $ zip input [0..]
-        tie = any (\(id,coord) -> id /= fst closestiddist && coord == snd closestiddist) distances
-    in if tie then -1 else fst closestiddist
+area nobe = length $ filter (== nobe) $ map closest grid
 
-part1 input =
-    let maxx = maximum $ map fst input
-        maxy = maximum $ map snd input
-        grid = [ (x,y) | x <- [0..maxx], y <- [0..maxy] ]
-        voro :: [((Int, Int), Int)]
-        voro = map (\coord -> (coord, closestnoob input coord)) grid
-        edge1 = filter ((== 0) . fst . fst) voro
-        edge2 = filter ((== maxx) . fst . fst) voro
-        edge3 = filter ((== 0) . snd .fst) voro
-        edge4 = filter ((== maxy) . snd .fst) voro
-        infis = nub $ map snd $ edge1 ++ edge2 ++ edge3 ++ edge4
-        scores = map (\id -> (id, length $ filter ((==id).snd) voro)) [0..length input-1]
-    in last $ sort $ map snd $ filter (\(id,score) -> not $ elem id infis) scores
+part1 = last $ sort $ map area $ [0..length input] \\ map closest [ (x,y) | (x,y) <- grid, elem x [0,maxx] || elem y [0,maxy] ]
 
-part2 input =
-    let maxx = maximum $ map fst input
-        maxy = maximum $ map snd input
-        grid = [ (x,y) | x <- [0..maxx], y <- [0..maxy] ]
-        safes = map (safe input) grid
-    in sum safes
+region p = sum (map (distance p) input) < 10000
 
-main = print (part1 input, part2 input)
+part2 = length $ filter region grid
 
-testinput = [
-    (1, 1),
-    (1, 6),
-    (8, 3),
-    (3, 4),
-    (5, 5),
-    (8, 9)]
+main = print (part1, part2)
 
 input = [
     (336, 308),
