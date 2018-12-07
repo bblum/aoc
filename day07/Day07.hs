@@ -9,12 +9,11 @@ elf n ((a,t):rest) = second ((a,t-1):) (elf (n-1) rest)
 solve n t todo work s = step [ c | length work < n, c <- take 1 $ todo \\ (map fst work ++ map snd s) ]
     where step [c] = solve n t (todo \\ [c]) ((c, 61 + fromEnum c - fromEnum 'A'):work) s
           step [] = let (done,work') = elf n work
-                    in (done ++) <$> (if null work then (t,[]) else solve n (t+1) todo work' $ filter (not . flip elem done . fst) s)
+                    in (done ++) <$> if null work then (t,[]) else solve n (t+1) todo work' $ filter (not . flip elem done . fst) s
 
-solve' n = solve n 0 "ABCDEFGHIJKLMNOPQRSTUVWXYZ" [] input
+solve' n = solve n 0 (sort $ nub $ uncurry (++) $ unzip input) [] input
 
 main = print (snd $ solve' 1, fst $ solve' 5)
-
 
 input = [
     ('E','Y'),
