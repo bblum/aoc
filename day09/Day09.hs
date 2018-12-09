@@ -8,6 +8,7 @@ del k n (m,(p,q)) = del k n (m, (p ++ reverse q, []))
 
 marble k state n = if mod n 23 == 0 then del k n state else ins n <$> state
 
-solve k n = maximum $ elems $ fst $ foldl (marble k) (fromList $ zip [0..k-1] $ repeat 0, ([0,1],[])) [2..n]
+solve k n = maximum $ elems $ fst $ foldl (marble k) (m,([0,1],[])) [2..n]
+    where m = fromList $ zip [0..k-1] $ repeat 0
 
 main = print (solve 418 71339, solve 418 7133900)
