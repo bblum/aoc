@@ -13,7 +13,7 @@ output xys = map row [minimum $ map last xys..maximum $ map last xys]
     where row y = map (col y) [minimum $ map head xys..maximum $ map head xys]
           col y x = if elem [x,y] xys then '#' else '.'
 
-main = do input <- map words <$> lines <$> readFile "input.txt"
-          let (word, n) = until isword (map update *** (+1)) (map parse input, 0)
+main = do input <- map (parse . words) <$> lines <$> readFile "input.txt"
+          let (word, n) = until isword (map update *** (+1)) (input, 0)
           mapM print $ output $ map fst word
           print n
