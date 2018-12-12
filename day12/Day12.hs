@@ -11,7 +11,7 @@ trim = t . t . map snd where t = dropWhile (=='.') . reverse
 
 glider ((_,p):(_,q):_) = trim p == trim q
 
-solve (Just ((n,p):(_,q):_)) = score p + (50000000000 - n) * d  where d = score q - score p
+solve (Just ((n,p):(_,q):_)) = score p + (50000000000 - n) * (score q - score p)
 
 main = do print $ score $ iterate generation pots !! 20
           print $ solve $ find glider $ tails $ zip [0..] $ iterate generation pots
