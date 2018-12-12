@@ -1,7 +1,7 @@
 import Data.List
 import Data.Maybe
 
-cell k p = fromJust $ lookup (map (fromMaybe '.' . flip lookup p) [k-2..k+2]) rules
+cell k p = fromJust $ lookup [ fromMaybe '.' $ lookup c p | c <- [k-2..k+2] ] rules
 
 generation p = [ (k,cell k p) | k <- [minimum (map fst p) - 2 .. maximum (map fst p) + 2] ]
 
