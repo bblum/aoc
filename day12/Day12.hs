@@ -1,25 +1,22 @@
-import qualified Data.Map as M
+import Data.List
+import Data.Maybe
 
-cell k m =
-    let nbrs = map (get m) [k-2..k+2]
-        get m k = case M.lookup k m of Just x -> x; Nothing -> '.'
-    in case lookup nbrs rules of
-           Just result -> result
-           Nothing -> '.'
+cell k p = fromJust $ lookup (map (fromMaybe '.' . flip lookup p) [k-2..k+2]) rules
 
-generation m = M.fromList [ (k,cell k m) | let mink = minimum $ M.keys m, let maxk = maximum $ M.keys m, k <- [mink-2..maxk+2] ]
+generation p = [ (k,cell k p) | k <- [minimum (map fst p) - 2 .. maximum (map fst p) + 2] ]
 
-foo (key,'.') = 0
-foo (key,'#') = key
-solve result = sum $ map foo result
+score = sum . map fst . filter ((=='#') . snd)
 
-trim str = dropWhile (=='.') $ reverse $ dropWhile (=='.') $ reverse str
-main = do print $ solve $ M.toList $ iterate generation start !! 20
-          print $ take 500 $ map (solve . M.toList)$ iterate generation start
-          -- mapM (print . trim . map snd . M.toList) $ iterate generation start
-          -- print $ solve $ M.toList $ iterate generation start2 !! 20
+trim = t . t . map snd where t = dropWhile (=='.') . reverse
 
-start = M.fromList $ zip [0..] "#..####.##..#.##.#..#.....##..#.###.#..###....##.##.#.#....#.##.####.#..##.###.#.......#............"
+glider ((_,p):(_,q):_) = trim p == trim q
+
+solve (Just ((n,p):(_,q):_)) = score p + (50000000000 - n) * d  where d = score q - score p
+
+main = do print $ score $ iterate generation pots !! 20
+          print $ solve $ find glider $ tails $ zip [0..] $ iterate generation pots
+
+pots = zip [0..] "#..####.##..#.##.#..#.....##..#.###.#..###....##.##.#.#....#.##.####.#..##.###.#.......#............"
 
 rules = [
     ("##...",'.'),
@@ -54,21 +51,3 @@ rules = [
     ("#####",'#'),
     ("#....",'.'),
     ("..#..",'#')]
-
-
-start2 = M.fromList $ zip [0..] "#..#.#..##......###...###"
-rules2 = [
-    ("...##",'#'),
-    ("..#..",'#'),
-    (".#...",'#'),
-    (".#.#.",'#'),
-    (".#.##",'#'),
-    (".##..",'#'),
-    (".####",'#'),
-    ("#.#.#",'#'),
-    ("#.###",'#'),
-    ("##.#.",'#'),
-    ("##.##",'#'),
-    ("###..",'#'),
-    ("###.#",'#'),
-    ("####.",'#')]
