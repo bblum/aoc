@@ -20,7 +20,7 @@ type Noobs = M.Map Coord Int
 data Board = B { spaces :: S.Set Coord, gobs :: Noobs, elfs :: Noobs, time :: Int } deriving (Ord, Eq)
 
 instance Show Board where
-    show b = intercalate "\n" $ map (flip concatMap [0..maxx+1] . cell) [0..maxy+1]
+    show b = intercalate "\n" $ [show $ time b] ++ map (flip concatMap [0..maxx+1] . cell) [0..maxy+1]
         where maxx = maximum $ map snd $ S.elems $ spaces b
               maxy = maximum $ map fst $ S.elems $ spaces b
               hp f yx = reverse $ take 3 $ (reverse $ show $ f b M.! yx) ++ repeat '0'
@@ -43,8 +43,8 @@ getRace Gob = gobs
 getRace Elf = elfs
 updateRace Gob f b = b { gobs = f $ gobs b }
 updateRace Elf f b = b { elfs = f $ elfs b }
-getEnemies r = getRace $ toEnum $ 1 - fromEnum r
-updateEnemies r = updateRace $ toEnum $ 1 - fromEnum r
+getEnemies race = getRace $ toEnum $ 1 - fromEnum race
+updateEnemies race = updateRace $ toEnum $ 1 - fromEnum race
 
 fnbrs :: Coord -> [Coord]
 fnbrs (y,x) = [(y-1,x),(y,x-1),(y,x+1),(y+1,x)]
@@ -112,15 +112,19 @@ turn (yx, race) =
        v' <- case yx' of Just newyx -> victim race newyx; Nothing -> return v
        fromMaybe (return Nothing) $ turnAttack race <$> v' -- could golf better?
 
+turn' (yx, race) =
+    do noobs <- getRace race <$> get
+       if M.member yx noobs then turn (yx, race) else return Nothing
+
 tick :: State Board (Maybe Outcome)
 tick =
     do gs <- map (,Gob) <$> M.keys <$> gobs <$> get
        es <- map (,Elf) <$> M.keys <$> elfs <$> get
+       oldtime <- time <$> get -- XXX: this doesn't always work, bss ol bar etc
        modify $ \b -> b { time = time b + 1 }
-       oldtime <- time <$> get
        -- finds the first "Just" final-hp-result among turn results
        -- if any are Just it means combat should end there & return that total
-       outcome <- join <$> find isJust <$> mapM turn (sortBy (comparing fst) $ gs ++ es)
+       outcome <- join <$> find isJust <$> mapM turn' (sortBy (comparing fst) $ gs ++ es)
        board <- get
        traceShow board $ return $ (oldtime *) <$> outcome
 
