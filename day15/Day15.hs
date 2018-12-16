@@ -1,17 +1,15 @@
-{-# LANGUAGE FlexibleContexts, TupleSections, MonadComprehensions #-}
+{-# LANGUAGE TupleSections #-}
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.List
 import Data.Maybe
-import Data.Char
 import Data.Ord
 import Control.Monad.State
-import Control.Arrow
 import Debug.Trace
 
 maxhp = 200
 atk Gob = 3
-atk Elf = 14
+atk Elf = 15
 
 type Coord = (Int, Int) -- y,x so sort DTRT
 type Score = Int
@@ -57,9 +55,7 @@ open yx = do space <- S.member yx <$> spaces <$> get
              return $ space && nogob && noelf
 
 targetSquares :: Coord -> Race -> State Board [Coord]
-targetSquares yx race =
-    do enemy_noobs <- M.keys <$> getEnemies race <$> get
-       filterM open $ nub $ concatMap fnbrs enemy_noobs
+targetSquares yx race = join $ filterM open <$> nub <$> concatMap fnbrs <$> M.keys <$> getEnemies race <$> get
 
 bfs :: Coord -> Int -> S.Set Coord -> [Coord] -> [Coord] -> State Board (Maybe Int)
 bfs goal n seen [] [] = return Nothing
@@ -67,19 +63,14 @@ bfs goal n seen todo_later [] = bfs goal (n+1) seen [] todo_later
 bfs goal n seen todo_later (yx:todo_now) | yx == goal = return $ Just n
 bfs goal n seen todo_later (yx:todo_now) =
     do new_todos <- filterM open $ filter (flip S.notMember seen) $ fnbrs yx
-       let new_seen = S.union seen $ S.fromList new_todos
-       bfs goal n new_seen (todo_later ++ new_todos) todo_now
+       bfs goal n (S.union seen $ S.fromList new_todos) (todo_later ++ new_todos) todo_now
 
 -- coord is the first square you should go to in this path; int is the distance thereto
 path :: Coord -> Coord -> State Board (Maybe (Coord, Int))
 path yx goal =
     do steps <- filterM open $ fnbrs yx -- floodfill 4 times, in reading order
        scores <- mapM (bfs goal 0 S.empty [] . (:[])) steps
-       let steps_scores = catMaybes $ zipWith (\x y -> (x,) <$> y) steps scores
-       if null steps_scores then
-           return Nothing
-       else
-           return $ Just $ minimumBy (comparing snd) steps_scores
+       return $ listToMaybe $ sortBy (comparing snd) $ catMaybes $ zipWith (fmap . (,)) steps scores
 
 turnMove :: Coord -> Race -> State Board Coord
 turnMove yx race =
@@ -95,13 +86,12 @@ turnMove yx race =
 
 turnAttack :: Race -> Coord -> State Board (Maybe Score)
 turnAttack race noob =
-    do modify $ updateEnemies race $ \m -> M.update (attack $ atk race) noob m
+    do let attack dmg hp = if hp <= dmg then Nothing else Just $ hp - dmg
+       modify $ updateEnemies race $ \m -> M.update (attack $ atk race) noob m
        elves <- getRace Elf <$> get
-       when (race == Gob && M.notMember noob elves) $ error "elf died"
+       when (race == Gob && M.notMember noob elves) $ error "elf died" -- part 2
        done <- M.null <$> getEnemies race <$> get
-       if done then Just <$> score race else return Nothing
-    where attack dmg hp = if hp <= dmg then Nothing else Just $ hp - dmg
-          score race = sum <$> M.elems <$> getRace race <$> get
+       if done then Just <$> sum <$> M.elems <$> getRace race <$> get else return Nothing
 
 victim :: Race -> Coord -> State Board (Maybe Coord) -- lowest hp 1st, reading order 2nd
 victim race yx =
@@ -113,7 +103,7 @@ turn (yx, race) =
     do v <- victim race yx
        yx' <- if isNothing v then Just <$> turnMove yx race else return Nothing
        v' <- case yx' of Just newyx -> victim race newyx; Nothing -> return v
-       fromMaybe (return Nothing) $ turnAttack race <$> v' -- could golf better?
+       fromMaybe (return Nothing) $ turnAttack race <$> v'
 
 turn' (yx, race) =
     do noobs <- getRace race <$> get
@@ -123,7 +113,7 @@ tick :: State Board (Maybe Outcome)
 tick =
     do gs <- map (,Gob) <$> M.keys <$> gobs <$> get
        es <- map (,Elf) <$> M.keys <$> elfs <$> get
-       oldtime <- time <$> get -- XXX: this doesn't always work, bss ol bar etc
+       oldtime <- time <$> get -- XXX: this doesn't always work, bss ol bar on some samples
        modify $ \b -> b { time = time b + 1 }
        -- finds the first "Just" final-hp-result among turn results
        -- if any are Just it means combat should end there & return that total
