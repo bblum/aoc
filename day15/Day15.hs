@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, FlexibleContexts #-}
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.List
@@ -38,10 +38,10 @@ parseBoard input = foldl row (B S.empty M.empty M.empty 0) $ zip [0..] input
           noob y x m = M.insert (y,x) maxhp m
 
 data Race = Gob | Elf deriving (Enum, Eq)
-getRace Gob = gobs
-getRace Elf = elfs
-updateRace Gob f b = b { gobs = f $ gobs b }
-updateRace Elf f b = b { elfs = f $ elfs b }
+getRace Gob = gobs <$> get
+getRace Elf = elfs <$> get
+updateRace Gob f = modify $ \b -> b { gobs = f $ gobs b }
+updateRace Elf f = modify $ \b -> b { elfs = f $ elfs b }
 getEnemies race = getRace $ toEnum $ 1 - fromEnum race
 updateEnemies race = updateRace $ toEnum $ 1 - fromEnum race
 
@@ -55,7 +55,7 @@ open yx = do space <- S.member yx <$> spaces <$> get
              return $ space && nogob && noelf
 
 targetSquares :: Coord -> Race -> State Board [Coord]
-targetSquares yx race = join $ filterM open <$> nub <$> concatMap fnbrs <$> M.keys <$> getEnemies race <$> get
+targetSquares yx race = join $ filterM open <$> nub <$> concatMap fnbrs <$> M.keys <$> getEnemies race
 
 bfs :: Coord -> Int -> S.Set Coord -> [Coord] -> [Coord] -> State Board (Maybe Int)
 bfs goal n seen [] [] = return Nothing
@@ -75,27 +75,22 @@ path yx goal =
 turnMove :: Coord -> Race -> State Board Coord
 turnMove yx race =
     do targets <- targetSquares yx race
-       paths <- catMaybes <$> mapM (path yx) targets
-       if null paths then
-           return yx
-       else
-           do let (newyx,_) = minimumBy (comparing snd) paths
-              let move m = M.delete yx $ M.insert newyx (m M.! yx) m
-              modify $ updateRace race move
-              return newyx
+       newyx <- fromMaybe yx <$> listToMaybe <$> map fst <$> sortBy (comparing snd) <$> catMaybes <$> mapM (path yx) targets
+       updateRace race $ \m -> M.insert newyx (m M.! yx) $ M.delete yx m
+       return newyx
 
 turnAttack :: Race -> Coord -> State Board (Maybe Score)
 turnAttack race noob =
     do let attack dmg hp = if hp <= dmg then Nothing else Just $ hp - dmg
-       modify $ updateEnemies race $ \m -> M.update (attack $ atk race) noob m
-       elves <- getRace Elf <$> get
+       updateEnemies race $ \m -> M.update (attack $ atk race) noob m
+       elves <- getRace Elf
        when (race == Gob && M.notMember noob elves) $ error "elf died" -- part 2
-       done <- M.null <$> getEnemies race <$> get
-       if done then Just <$> sum <$> M.elems <$> getRace race <$> get else return Nothing
+       done <- M.null <$> getEnemies race
+       if done then Just <$> sum <$> M.elems <$> getRace race else return Nothing
 
 victim :: Race -> Coord -> State Board (Maybe Coord) -- lowest hp 1st, reading order 2nd
 victim race yx =
-    do noobs <- getEnemies race <$> get
+    do noobs <- getEnemies race
        return $ listToMaybe $ sortBy (comparing (noobs M.!)) $ filter (flip M.member noobs) $ fnbrs yx
 
 turn :: (Coord, Race) -> State Board (Maybe Score)
@@ -106,7 +101,7 @@ turn (yx, race) =
        fromMaybe (return Nothing) $ turnAttack race <$> v'
 
 turn' (yx, race) =
-    do noobs <- getRace race <$> get
+    do noobs <- getRace race
        if M.member yx noobs then turn (yx, race) else return Nothing
 
 tick :: State Board (Maybe Outcome)
@@ -114,12 +109,10 @@ tick =
     do gs <- map (,Gob) <$> M.keys <$> gobs <$> get
        es <- map (,Elf) <$> M.keys <$> elfs <$> get
        oldtime <- time <$> get -- XXX: this doesn't always work, bss ol bar on some samples
-       modify $ \b -> b { time = time b + 1 }
+       modify $ \b -> traceShow b $ b { time = time b + 1 }
        -- finds the first "Just" final-hp-result among turn results
        -- if any are Just it means combat should end there & return that total
-       outcome <- join <$> find isJust <$> mapM turn' (sortBy (comparing fst) $ gs ++ es)
-       board <- get
-       traceShow board $ return $ (oldtime *) <$> outcome
+       fmap (oldtime *) <$> listToMaybe <$> catMaybes <$> mapM turn' (sortBy (comparing fst) $ gs ++ es)
 
 simulate :: State Board Outcome
 simulate = liftM2 (flip fromMaybe) tick simulate -- "while !done() tick();" :haskell_think:
