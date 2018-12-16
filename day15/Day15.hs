@@ -13,10 +13,8 @@ maxhp = 200
 atk = 3
 
 type Coord = (Int, Int) -- y,x so sort DTRT
-
 type Score = Int
 type Outcome = Int
-
 type Noobs = M.Map Coord Int
 
 data Board = B { spaces :: S.Set Coord, gobs :: Noobs, elfs :: Noobs, time :: Int } deriving (Ord, Eq)
@@ -48,8 +46,8 @@ updateRace Elf f b = b { elfs = f $ elfs b }
 getEnemies r = getRace $ toEnum $ 1 - fromEnum r
 updateEnemies r = updateRace $ toEnum $ 1 - fromEnum r
 
-nbrs :: Coord -> [Coord]
-nbrs (y,x) = [(y-1,x),(y,x-1),(y,x+1),(y+1,x)]
+fnbrs :: Coord -> [Coord]
+fnbrs (y,x) = [(y-1,x),(y,x-1),(y,x+1),(y+1,x)]
 
 open :: Coord -> State Board Bool
 open yx = do space <- S.member yx <$> spaces <$> get
@@ -60,22 +58,21 @@ open yx = do space <- S.member yx <$> spaces <$> get
 targetSquares :: Coord -> Race -> State Board [Coord]
 targetSquares yx race =
     do enemy_noobs <- M.keys <$> getEnemies race <$> get
-       filterM open $ nub $ concatMap nbrs enemy_noobs
+       filterM open $ nub $ concatMap fnbrs enemy_noobs
 
 bfs :: Coord -> Int -> S.Set Coord -> [Coord] -> [Coord] -> State Board (Maybe Int)
 bfs goal n seen [] [] = return Nothing
 bfs goal n seen todo_later [] = bfs goal (n+1) seen [] todo_later
--- bfs goal n seen todo_later (yx:todo_now) | elem yx $ nbrs goal = return $ Just n
 bfs goal n seen todo_later (yx:todo_now) | yx == goal = return $ Just n
 bfs goal n seen todo_later (yx:todo_now) =
-    do new_todos <- filterM open $ filter (flip S.notMember seen) $ nbrs yx
+    do new_todos <- filterM open $ filter (flip S.notMember seen) $ fnbrs yx
        let new_seen = S.union seen $ S.fromList new_todos
        bfs goal n new_seen (todo_later ++ new_todos) todo_now
 
 -- coord is the first square you should go to in this path; int is the distance thereto
 path :: Coord -> Coord -> State Board (Maybe (Coord, Int))
 path yx goal =
-    do steps <- filterM open $ nbrs yx -- floodfill 4 times, in reading order
+    do steps <- filterM open $ fnbrs yx -- floodfill 4 times, in reading order
        scores <- mapM (bfs goal 0 S.empty [] . (:[])) steps
        let steps_scores = catMaybes $ zipWith (\x y -> (x,) <$> y) steps scores
        if null steps_scores then
@@ -103,20 +100,24 @@ turnAttack race noob =
     where attack hp = if hp <= atk then Nothing else Just $ hp - atk
           score race = sum <$> M.elems <$> getRace race <$> get
 
+victim :: Race -> Coord -> State Board (Maybe Coord) -- lowest hp 1st, reading order 2nd
+victim race yx =
+    do noobs <- getEnemies race <$> get
+       return $ listToMaybe $ sortBy (comparing (noobs M.!)) $ filter (flip M.member noobs) $ fnbrs yx
+
 turn :: (Coord, Race) -> State Board (Maybe Score)
 turn (yx, race) =
-    do v <- victim yx
+    do v <- victim race yx
        yx' <- if isNothing v then Just <$> turnMove yx race else return Nothing
-       v' <- case yx' of Just newpos -> victim newpos; Nothing -> return v
+       v' <- case yx' of Just newyx -> victim race newyx; Nothing -> return v
        fromMaybe (return Nothing) $ turnAttack race <$> v' -- could golf better?
-    where victim pos = listToMaybe <$> flip filter (nbrs pos) <$> flip M.member <$> getEnemies race <$> get
 
 tick :: State Board (Maybe Outcome)
 tick =
     do gs <- map (,Gob) <$> M.keys <$> gobs <$> get
        es <- map (,Elf) <$> M.keys <$> elfs <$> get
-       oldtime <- time <$> get
        modify $ \b -> b { time = time b + 1 }
+       oldtime <- time <$> get
        -- finds the first "Just" final-hp-result among turn results
        -- if any are Just it means combat should end there & return that total
        outcome <- join <$> find isJust <$> mapM turn (sortBy (comparing fst) $ gs ++ es)
