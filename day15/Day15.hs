@@ -40,13 +40,13 @@ parseBoard input = foldl row (B S.empty M.empty M.empty 0) $ zip [0..] input
           cell y b (x,c) = error $ "unexpected char " ++ show c 
           noob y x m = M.insert (y,x) maxhp m
 
-type Race = Bool -- True => Elf
-getRace False = gobs
-getRace True  = elfs
-updateRace False f b = b { gobs = f $ gobs b }
-updateRace True  f b = b { elfs = f $ elfs b }
-getEnemy r = getRace $ not r
-updateEnemy r = updateRace $ not r
+data Race = Gob | Elf deriving Enum
+getRace Gob = gobs
+getRace Elf = elfs
+updateRace Gob f b = b { gobs = f $ gobs b }
+updateRace Elf f b = b { elfs = f $ elfs b }
+getEnemies r = getRace $ toEnum $ 1 - fromEnum r
+updateEnemies r = updateRace $ toEnum $ 1 - fromEnum r
 
 nbrs :: Coord -> [Coord]
 nbrs (y,x) = [(y-1,x),(y,x-1),(y,x+1),(y+1,x)]
@@ -58,8 +58,8 @@ open yx = do space <- S.member yx <$> spaces <$> get
              return $ space && nogob && noelf
 
 targetSquares :: Coord -> Race -> State Board [Coord]
-targetSquares yx enemies =
-    do enemy_noobs <- M.keys <$> getRace enemies <$> get
+targetSquares yx race =
+    do enemy_noobs <- M.keys <$> getEnemies race <$> get
        filterM open $ nub $ concatMap nbrs enemy_noobs
 
 bfs :: Coord -> Int -> S.Set Coord -> [Coord] -> [Coord] -> State Board (Maybe Int)
@@ -84,37 +84,37 @@ path yx goal =
            return $ Just $ minimumBy (comparing snd) steps_scores
 
 turnMove :: Coord -> Race -> State Board Coord
-turnMove yx enemies =
-    do targets <- targetSquares yx enemies
+turnMove yx race =
+    do targets <- targetSquares yx race
        paths <- catMaybes <$> mapM (path yx) targets
        if null paths then
            return yx
        else
            do let (newyx,_) = minimumBy (comparing snd) paths
               let move m = M.delete yx $ M.insert newyx (m M.! yx) m
-              modify $ updateRace (not enemies) move
+              modify $ updateRace race move
               return newyx
 
 turnAttack :: Race -> Coord -> State Board (Maybe Score)
-turnAttack enemies noob =
-    do modify $ updateRace enemies $ \m -> M.update attack noob m
-       done <- M.null <$> getRace enemies <$> get
-       if done then Just <$> score (not enemies) else return Nothing
+turnAttack race noob =
+    do modify $ updateEnemies race $ \m -> M.update attack noob m
+       done <- M.null <$> getEnemies race <$> get
+       if done then Just <$> score race else return Nothing
     where attack hp = if hp <= atk then Nothing else Just $ hp - atk
           score race = sum <$> M.elems <$> getRace race <$> get
 
 turn :: (Coord, Race) -> State Board (Maybe Score)
-turn (yx, enemies) =
+turn (yx, race) =
     do v <- victim yx
-       yx' <- if isNothing v then Just <$> turnMove yx enemies else return Nothing
+       yx' <- if isNothing v then Just <$> turnMove yx race else return Nothing
        v' <- case yx' of Just newpos -> victim newpos; Nothing -> return v
-       fromMaybe (return Nothing) $ turnAttack enemies <$> v' -- could golf better?
-    where victim pos = listToMaybe <$> flip filter (nbrs pos) <$> flip M.member <$> getRace enemies <$> get
+       fromMaybe (return Nothing) $ turnAttack race <$> v' -- could golf better?
+    where victim pos = listToMaybe <$> flip filter (nbrs pos) <$> flip M.member <$> getEnemies race <$> get
 
 tick :: State Board (Maybe Outcome)
 tick =
-    do gs <- map (,True)  <$> M.keys <$> gobs <$> get
-       es <- map (,False) <$> M.keys <$> elfs <$> get
+    do gs <- map (,Gob) <$> M.keys <$> gobs <$> get
+       es <- map (,Elf) <$> M.keys <$> elfs <$> get
        oldtime <- time <$> get
        modify $ \b -> b { time = time b + 1 }
        -- finds the first "Just" final-hp-result among turn results
