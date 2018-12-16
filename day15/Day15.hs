@@ -117,5 +117,4 @@ tick =
 simulate :: State Board Outcome
 simulate = liftM2 (flip fromMaybe) tick simulate -- "while !done() tick();" :haskell_think:
 
-main = do input <- parseBoard <$> lines <$> readFile "input.txt"
-          print $ evalState simulate input
+main = join $ print <$> evalState simulate <$> parseBoard <$> lines <$> readFile "input.txt"
