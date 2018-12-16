@@ -10,7 +10,8 @@ import Control.Arrow
 import Debug.Trace
 
 maxhp = 200
-atk = 3
+atk Gob = 3
+atk Elf = 14
 
 type Coord = (Int, Int) -- y,x so sort DTRT
 type Score = Int
@@ -38,7 +39,7 @@ parseBoard input = foldl row (B S.empty M.empty M.empty 0) $ zip [0..] input
           cell y b (x,c) = error $ "unexpected char " ++ show c 
           noob y x m = M.insert (y,x) maxhp m
 
-data Race = Gob | Elf deriving Enum
+data Race = Gob | Elf deriving (Enum, Eq)
 getRace Gob = gobs
 getRace Elf = elfs
 updateRace Gob f b = b { gobs = f $ gobs b }
@@ -94,10 +95,12 @@ turnMove yx race =
 
 turnAttack :: Race -> Coord -> State Board (Maybe Score)
 turnAttack race noob =
-    do modify $ updateEnemies race $ \m -> M.update attack noob m
+    do modify $ updateEnemies race $ \m -> M.update (attack $ atk race) noob m
+       elves <- getRace Elf <$> get
+       when (race == Gob && M.notMember noob elves) $ error "elf died"
        done <- M.null <$> getEnemies race <$> get
        if done then Just <$> score race else return Nothing
-    where attack hp = if hp <= atk then Nothing else Just $ hp - atk
+    where attack dmg hp = if hp <= dmg then Nothing else Just $ hp - dmg
           score race = sum <$> M.elems <$> getRace race <$> get
 
 victim :: Race -> Coord -> State Board (Maybe Coord) -- lowest hp 1st, reading order 2nd
