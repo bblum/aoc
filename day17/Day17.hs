@@ -1,13 +1,5 @@
-{-# LANGUAGE FlexibleContexts, TupleSections, MonadComprehensions #-}
-import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.List
-import Data.Bits
-import Data.Maybe
-import Data.Char
-import Data.Ord
-import Control.Monad.State
-import Control.Arrow
 import Debug.Trace
 
 type Coord = (Int, Int)
@@ -33,26 +25,23 @@ getnextwater clays water (y,x) =
          findDrySandRight clays water (y+1,x+1)) &&
     (isDrySand clays water (y,x-1) || isDrySand clays water (y,x+1))
 
-bfs clays water [] =
+bfs gen clays water [] =
     let nextwater = S.filter (getnextwater clays water) water
     in if S.null nextwater then water -- traceShow (output clays water) water
-       else -- traceShow (output clays water) $ traceShow nextwater $
-                bfs clays water $ S.toList nextwater
-    -- if undefined -- TODO: search for next falling water up in the path to be frontier
-    -- then
-    --     undefined -- TODO add it to frontier (ok to stay in water)
-    -- else S.toList water
-bfs clays water ((w@(y,x)):frontier) = -- traceShow (y,x) $
+       else
+           let dbg = if mod gen 10 == 0 then traceShow (output clays water) else id
+           in dbg $ bfs (gen+1) clays water $ S.toList nextwater
+bfs gen clays water ((w@(y,x)):frontier) = -- traceShow (y,x) $
     if isDrySand clays water (y+1,x) then
-        bfs clays (S.insert (y+1,x) water) ((y+1,x):frontier) -- sand below water, flow into it
-    else if y == maximum (map fst $ S.toList clays) then bfs clays water frontier else
+        bfs gen clays (S.insert (y+1,x) water) ((y+1,x):frontier) -- sand below water, flow into it
+    else if y == maximum (map fst $ S.toList clays) then bfs gen clays water frontier else
         let (w1,f1) = if isDrySand clays water (y,x-1) then -- flow left?
                           (S.insert (y,x-1) water, (y,x-1):frontier) -- FIXME: dfs? bfs?
                       else (water,frontier)
             (w2,f2) = if isDrySand clays water (y,x+1) then -- flow right?
                           (S.insert (y,x+1) w1, (y,x+1):f1) -- FIXME
                       else (w1,f1)
-        in bfs clays w2 f2
+        in bfs gen clays w2 f2
 
 isSand clays (y,x) = S.notMember (y,x) clays && y <= maximum (map fst $ S.toList clays)
 isDrySand clays water (y,x) = isSand clays (y,x) && S.notMember (y,x) water
@@ -69,7 +58,8 @@ output clays water =
 
 main = do input <- map words <$> lines <$> readFile "input.txt"
           let clays = foldl parse S.empty input
-          -- mapM print $ output clays $ S.fromList [spring]
-          let flow = bfs clays S.empty [spring]
-          mapM print $ output clays flow
-          print $ S.size flow
+          mapM putStrLn $ output clays $ S.fromList [spring]
+          -- XXX: it doesn't even work lmao
+          -- let flow = bfs 0 clays S.empty [spring]
+          -- mapM print $ output clays flow
+          -- print $ S.size flow
