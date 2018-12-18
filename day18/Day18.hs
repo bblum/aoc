@@ -4,9 +4,9 @@ update grid (y,x) = rule $ grid !! y !! x
     where rule '.' = if fnbrs '|' > 2 then '|' else '.'
           rule '|' = if fnbrs '#' > 2 then '#' else '|'
           rule '#' = if fnbrs '#' > 0 && fnbrs '|' > 0 then '#' else '.'
-          fnbrs c = length $ filter (==c) $ map (uncurry $ (!!) . (grid !!)) $
-                        [ (w,z) | z <- intersect [x-1..x+1] [0..length (head grid) - 1],
-                                  w <- intersect [y-1..y+1] [0..length grid - 1] ] \\ [(y,x)]
+          fnbrs c = sum [ 1 | w <- intersect [y-1..y+1] [0..length grid - 1],
+                              z <- intersect [x-1..x+1] [0..length (head grid) - 1],
+                              (w,z) /= (y,x) && (grid !! w !! z) == c ]
 
 updateall grid = map (map (update grid)) $ coords grid
 
