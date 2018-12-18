@@ -8,12 +8,12 @@ update grid (y,x) = rule $ grid !! y !! x
                               z <- intersect [x-1..x+1] [0..length (head grid) - 1],
                               (w,z) /= (y,x) && (grid !! w !! z) == c ]
 
-updateall grid = map (map (update grid)) $ coords grid
+minute grid = map (map (update grid)) $ coords grid
 
 coords grid = map (flip map [0..length (head grid) - 1] . (,)) [0..length grid - 1]
 
-score grid = count '#' * count '|' where count c = length $ filter (==c) $ concat grid
+score grid = count '#' * count '|' where count x = sum [ 1 | r <- grid, c <- r, c == x ]
 
 main = do input <- lines <$> readFile "input.txt"
-          print $ score $ iterate updateall input !! 10
-          print $ score $ iterate updateall input !! 2400
+          print $ score $ iterate minute input !! 10
+          print $ score $ iterate minute input !! 2400
