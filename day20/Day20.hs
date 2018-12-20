@@ -63,9 +63,8 @@ prettyprint doors =
 path :: Int -> S.Set (Coord, Char) -> M.Map Coord Int -> [Coord] -> [Coord] -> M.Map Coord Int
 path n room seen [] [] = seen
 path n room seen todo_next [] = path (n+1) room seen [] todo_next
-path n room seen todo_next (yx:todo_now) =
-    let nbrs = mapMaybe (\d -> [ move d yx | S.member (yx,d) room ]) "NESW"
-    in path n room (M.insert yx n seen) (todo_next ++ filter (flip M.notMember seen) nbrs) todo_now
+path n room seen todo_next (yx:todo_now) = path n room (M.insert yx n seen) (todo_next ++ nbrs) todo_now
+    where nbrs = mapMaybe (\d -> [ move d yx | S.member (yx,d) room, M.notMember (move d yx) seen ]) "NESW"
 
 main = do input <- readFile "input.txt"
           let (_,room) = flip execState ((0,0), S.empty) $ search $ fst $ parse (Seq []) input
