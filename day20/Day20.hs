@@ -50,10 +50,10 @@ search (Seq ((Or choices):rest)) =
 prettyprint :: S.Set (Coord, Char) -> [String]
 prettyprint doors =
     let xys = map fst $ S.elems doors
-        miny = fst $ minimumBy (comparing fst) xys
-        minx = snd $ minimumBy (comparing snd) xys
-        maxy = fst $ maximumBy (comparing fst) xys
-        maxx = snd $ maximumBy (comparing snd) xys
+        miny = minimum $ map fst xys
+        minx = minimum $ map snd xys
+        maxy = maximum $ map fst xys
+        maxx = maximum $ map snd xys
         vert  y x = if S.member ((y,x),'N') doors then '-' else '#'
         horiz y x = if S.member ((y,x),'W') doors then '|' else '#'
         row y = ["#" ++ (intersperse '#' $ map (vert y)  [minx..maxx]) ++ "#",
