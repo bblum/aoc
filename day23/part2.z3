@@ -1013,4 +1013,4 @@
 
 
 (check-sat)
-(get-model)
+(eval (+ x y z))
