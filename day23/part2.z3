@@ -10,10 +10,6 @@
   (abs (- a b))
 )
 
-(define-fun inrange ((a Int) (b Int) (c Int)) Int
-  0
-)
-
 (assert-soft (>= 87427481 (+ (manh x 136613456) (manh y (- 0512820)) (manh z (- 0739737)))))
 (assert-soft (>= 86116187 (+ (manh x (- 053697593)) (manh y 55277802) (manh z 49040699))))
 (assert-soft (>= 50746552 (+ (manh x 3220880) (manh y 75515511) (manh z 53337027))))
@@ -1017,5 +1013,4 @@
 
 
 (check-sat)
-(get-objectives)
 (get-model)
