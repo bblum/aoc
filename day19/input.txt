@@ -1,0 +1,47 @@
+#ip 3
+addi 3 16 3    L00 // jump +16   // goto L17
+
+seti 1  6 1    L01 // reg1 = 1
+
+seti 1  4 5    L02 // reg5 = 1
+mulr 1  5 4    L03 // reg4 = reg1 * reg5
+eqrr 4  2 4    L04 // if reg4 == reg2
+addr 4  3 3    L05 // jump +reg4 // then break L10
+addi 3  1 3    L06 // jump +1    // else skip it
+addr 1  0 0    L07 // reg0 += reg1
+
+addi 5  1 5    L08 // reg5++
+gtrr 5  2 4    L09 // if reg5 > reg2
+addr 3  4 3    L10 // jump +reg4 // then break L12
+seti 2  6 3    L11 // jump 02    // else goto L03
+
+addi 1  1 1    L12 // reg1++
+gtrr 1  2 4    L13 // if reg1 > reg2
+addr 4  3 3    L14 // jump +reg4 // then skip next thing
+seti 1  1 3    L15 // jump 1     // else goto L02
+mulr 3  3 3    L16 // exit
+
+--
+
+addi 2  2 2    L17 // reg2 += 2
+mulr 2  2 2    L18 // square reg2
+mulr 3  2 2    L19 // reg2 *= reg3
+muli 2 11 2    L20 // reg2 *= 11    // overall: reg2 = 11*reg3*(reg2+2)^2
+addi 4  8 4    L21 // reg4 += 8
+mulr 4  3 4    L22 // reg4 *= 3
+addi 4 12 4    L23 // reg4 += 12
+addr 2  4 2    L24 // reg2 += reg4 // over over all: reg2 = reg3*11(reg2+2)^2 + 3(reg4) + 36
+
+addr 3  0 3    L25 // jump +reg0 // "if part2 do the below initialization"
+seti 0  2 3    L26 // jump 0     // else goto L01
+
+setr 3  9 4    L27 // reg4 = reg3
+mulr 4  3 4    L28 // reg4 *= 3
+addr 3  4 4    L29 // reg4 += reg3
+mulr 3  4 4    L30 // reg4 *= reg3
+muli 4 14 4    L31 // reg4 *= 14
+mulr 4  3 4    L32 // reg4 *= reg3
+addr 2  4 2    L33 // reg2 += reg4 // over over all: reg2 = 14*4*reg3^3
+
+seti 0  4 0    L34 // reg0 = 0
+seti 0  3 3    L36 // jump 0    // goto L01
