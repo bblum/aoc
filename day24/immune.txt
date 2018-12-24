@@ -1,0 +1,10 @@
+916 3041 29 fire 13 weak cold fire
+1959 7875 38 radiation 20 weak cold immune slashing bludgeoning
+8933 5687 6 slashing 15
+938 8548 89 radiation 4
+1945 3360 16 cold 1 immune cold weak radiation
+2211 7794 30 fire 12 weak slashing
+24 3693 1502 fire 5
+2004 4141 18 slashing 19 immune radiation
+3862 3735 9 fire 10 immune bludgeoning fire
+8831 3762 3 fire 7 weak radiation

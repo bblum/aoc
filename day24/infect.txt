@@ -1,0 +1,10 @@
+578 55836 154 radiation 9
+476 55907 208 cold 18 weak fire
+496 33203 116 slashing 14 weak fire radiation immune cold bludgeoning
+683 12889 35 bludgeoning 11 weak fire
+1093 29789 51 radiation 17 immune cold fire
+2448 40566 25 slashing 16 immune bludgeoning fire weak cold
+1229 6831 8 bludgeoning 8 weak fire cold immune slashing
+3680 34240 17 radiation 3 immune bludgeoning weak fire cold
+4523 9788 3 bludgeoning 6 immune bludgeoning fire slashing
+587 49714 161 fire 2 weak bludgeoning
