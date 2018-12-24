@@ -5,17 +5,16 @@ import Data.Maybe
 wr regnum f regs = map (\(r,v) -> if r == regnum then f v else v) $ zip [0..] regs
 set regnum regs v = wr regnum (const v) regs
 
-instr regs ("addi", [a,b,c]) = set c regs $ (regs !! a) + b
-instr regs ("addr", [a,b,c]) = set c regs $ (regs !! a) + (regs !! b)
-instr regs ("muli", [a,b,c]) = set c regs $ (regs !! a) * b
-instr regs ("mulr", [a,b,c]) = set c regs $ (regs !! a) * (regs !! b)
+instr regs ("addi", [a,b,c]) = set c regs $ regs !! a + b
+instr regs ("addr", [a,b,c]) = set c regs $ regs !! a + regs !! b
+instr regs ("muli", [a,b,c]) = set c regs $ regs !! a * b
+instr regs ("mulr", [a,b,c]) = set c regs $ regs !! a * regs !! b
 instr regs ("seti", [a,b,c]) = set c regs $ a
 instr regs ("setr", [a,b,c]) = set c regs $ regs !! a
-instr regs ("gtrr", [a,b,c]) = set c regs $ fromEnum $ (regs !! a) > (regs !! b)
-instr regs ("eqrr", [a,b,c]) = set c regs $ fromEnum $ (regs !! a) == (regs !! b)
+instr regs ("gtrr", [a,b,c]) = set c regs $ fromEnum $ regs !! a > regs !! b
+instr regs ("eqrr", [a,b,c]) = set c regs $ fromEnum $ regs !! a == regs !! b
 
-execute ip prog regs | (regs !! ip) == 1 = set 0 regs $ sum [ y | x <- ns, y <- ns, x*y == regs !! 2 ]
-    where ns = S.toList $ divisors $ regs !! 2
+execute ip prog regs | regs !! ip == 1 = set 0 regs $ sum [ x | let ns = S.toList $ divisors $ regs !! 2, y <- ns, x <- ns, y*x == regs !! 2 ]
 execute ip prog regs | (regs !! ip) >= length prog = regs
 execute ip prog regs = execute ip prog $ wr ip (+1) $ instr regs $ prog !! (regs !! ip)
 
