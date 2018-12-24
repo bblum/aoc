@@ -14,13 +14,14 @@ instr regs ("setr", [a,b,c]) = set c regs $ regs !! a
 instr regs ("gtrr", [a,b,c]) = set c regs $ fromEnum $ regs !! a > regs !! b
 instr regs ("eqrr", [a,b,c]) = set c regs $ fromEnum $ regs !! a == regs !! b
 
-execute ip prog regs | regs !! ip == 1 = set 0 regs $ sum [ x | let ns = S.toList $ divisors $ regs !! 2, y <- ns, x <- ns, y*x == regs !! 2 ]
-execute ip prog regs | (regs !! ip) >= length prog = regs
+execute ip prog regs | regs !! ip == 1 = sum [ x | y <- ns, x <- ns, y*x == regs !! 2 ]
+    where ns = S.toList $ divisors $ regs !! 2
+execute ip prog regs | (regs !! ip) >= length prog = regs !! 0
 execute ip prog regs = execute ip prog $ wr ip (+1) $ instr regs $ prog !! (regs !! ip)
 
 parse (instr:rest) | length rest >= 3 = Just (instr, map read $ take 3 rest)
 parse _ = Nothing
 
 main = do (["#ip",ip]:prog) <- map words <$> lines <$> readFile "input.txt"
-          print $ execute (read ip) (mapMaybe parse prog) [0,0,0,0,0,0] !! 0
-          print $ execute (read ip) (mapMaybe parse prog) [1,0,0,0,0,0] !! 0
+          print $ execute (read ip) (mapMaybe parse prog) [0,0,0,0,0,0]
+          print $ execute (read ip) (mapMaybe parse prog) [1,0,0,0,0,0]
