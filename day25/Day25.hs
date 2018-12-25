@@ -1,6 +1,6 @@
 import Data.List
 
-nbr [x,y,z,w] [a,b,c,d] = (abs (x-a) + abs(y-b) + abs (z-c) + abs(w-d)) <= 3
+nbr x y = (sum $ map abs $ zipWith (-) x y) < 4
 
 rm input [] = input
 rm input (s:stars) = rm (input \\ nbrs) (stars ++ nbrs) where nbrs = filter (nbr s) input
