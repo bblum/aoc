@@ -25,5 +25,4 @@ parse (instr:rest) | length rest >= 3 = Just (instr, map read $ take 3 rest)
 parse _ = Nothing
 
 main = do (["#ip",ip]:prog) <- map words <$> lines <$> readFile "input.txt"
-          --print $ execute (read ip) (mapMaybe parse prog) [0,0,0,0,0,0]
           print $ execute (read ip) (mapMaybe parse prog) [0,0,0,0,0,0]
