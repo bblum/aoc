@@ -1,12 +1,7 @@
-{-# LANGUAGE FlexibleContexts, TupleSections #-}
-import qualified Data.Map as M
+import Data.Map ((!),keys,fromList)
 import Data.List
 import Data.Tuple
-import Data.Maybe
-import Data.Char
-import Control.Monad.State
 import Control.Arrow
-import Debug.Trace
 
 graph0 = [
     (("Faerun","Norrath"),129 ),
@@ -38,8 +33,8 @@ graph0 = [
     (("Snowdin","Straylight"),99),
     (("Tambi","Straylight"),70)]
 
-graph = map (swap *** id) graph0 ++ graph0
+graph = fromList $ graph0 ++ map (first swap) graph0
 
-cost path = sum $ map (fromJust . flip lookup graph) $ zip path $ tail path
+cost path = sum $ map (graph !) $ zip path $ tail path
 
-main = print $ (minimum &&& maximum)  $ map cost $ permutations $ nub $ map (fst . fst) $ graph
+main = print $ (minimum &&& maximum) $ map cost $ permutations $ nub $ map fst $ keys graph
