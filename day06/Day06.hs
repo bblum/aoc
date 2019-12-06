@@ -5,36 +5,45 @@ import Data.List
 import Data.Maybe
 import Data.Char
 import Data.Ord
+import Control.Applicative
 import Control.Monad.State
 import Control.Arrow
 import Debug.Trace
 
 parse [a,b,c,')',d,e,f] = ([a,b,c],[d,e,f])
 
-addorbit orbitmap (thing,moon) = M.insert thing newval orbitmap
-    where newval = if M.member thing orbitmap then (orbitmap M.! thing) ++ [moon] else [moon]
+build orbitMap (thing,moon) = M.insertWith (++) thing [moon] orbitMap
 
--- name, numNodes, numOrbits, moons, youDepth, santaDepth
-data System = S String Int Int [System] (Maybe Int) (Maybe Int) deriving Show
+data System = S {
+    size :: Int,
+    orbits :: Int,
+    moons :: [System],
+    you :: Maybe Int,
+    santa :: Maybe Int,
+    answer :: Maybe Int
+}
 
 buildsystem directorbits name =
-    let moons = if M.member name directorbits then directorbits M.! name else []
-        moonSystems = map (buildsystem directorbits) moons
-        totalMoonOrbits = sum $ map (\(S _moonname _nummoons orbits _moonmoons _ _) -> orbits) moonSystems
-        totalNoobs = sum $ map (\(S _moonname nummoons _orbits _moonmoons _ _) -> nummoons) moonSystems
-        youDepth = if name == "YOU" then Just 0
-                   else fmap (+1) $ join $ find isJust $ map (\(S _ _ _ _ youDepth _) -> youDepth) moonSystems
-        santaDepth = if name == "SAN" then Just 0
-                     else fmap (+1) $ join $ find isJust $ map (\(S _ _ _ _ _ santaDepth) -> santaDepth) moonSystems
-    in if isJust youDepth && isJust santaDepth then
-           error $ "found: " ++ show youDepth ++ show santaDepth
-       else S name (1 + totalNoobs) (totalMoonOrbits + totalNoobs) moonSystems youDepth santaDepth
+    let moonList = if M.member name directorbits then directorbits M.! name else []
+        moonSystems = map (buildsystem directorbits) moonList
+        totalOrbits = sum $ map orbits moonSystems
+        totalSize   = sum $ map size moonSystems
+        depth :: String -> (System -> Maybe Int) -> Maybe Int
+        depth who who_fn = if name == who then Just (-1)
+                           else fmap (+1) $ join $ find isJust $ map who_fn moonSystems
+        youDepth :: Maybe Int
+        youDepth = depth "YOU" you
+        sanDepth :: Maybe Int
+        sanDepth = depth "SAN" santa
+        moonAnswer = join $ find isJust $ map answer moonSystems
+        thisAnswer = do you <- youDepth; san <- sanDepth; Just $ you + san
+        bestAnswer = moonAnswer <|> thisAnswer
+    in S (1 + totalSize) (totalOrbits + totalSize) moonSystems youDepth sanDepth bestAnswer
 
-solve orbits =
-    let directorbits = foldl addorbit M.empty orbits
+solve input =
+    let directorbits = foldl build M.empty input
         system = buildsystem directorbits "COM"
-        S "COM" numNoobs answer _moons _ _ = system
-    in answer
+    in (orbits system, answer system)
 
 main = do input <- map parse <$> lines <$> readFile "input.txt"
           print $ solve input
