@@ -46,13 +46,12 @@ intcode input program index =
            -- unknown
            x -> error $ "invalid opcode: " ++ show x
 
-amplify program [a,b,c,d,e] =
-    let outa = intcode (a:0:oute) program 0
-        outb = intcode (b:outa) program 0
-        outc = intcode (c:outb) program 0
-        outd = intcode (d:outc) program 0
-        oute = intcode (e:outd) program 0
-    in last oute
+amplify program [a,b,c,d,e] = last oute
+    where outa = intcode (a:0:oute) program 0
+          outb = intcode (b:outa) program 0
+          outc = intcode (c:outb) program 0
+          outd = intcode (d:outc) program 0
+          oute = intcode (e:outd) program 0
 
 main = do input <- map read <$> words <$> readFile "input.txt"
           print $ maximum $ map (amplify input) $ permutations [0..4]
