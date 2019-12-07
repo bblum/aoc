@@ -9,15 +9,15 @@ parseOpcode op = (mod op 100, map parseMode powers)
     where parseMode mode = if mod (div op mode) 10 == 0 then Address else Immediate
           powers = 100:(map (*10) powers) -- [100,1000,10000,...]
 
-set :: Int -> Int -> [Int] -> [Int]
-set index value program = map (\(i,x) -> if i == index then value else x) $ zip [0..] program
+set :: Int -> a -> [a] -> [a]
+set index element list = map (\(i,x) -> if i == index then element else x) $ zip [0..] list
 
--- blockeD: name, program, index
--- ready: output value, name, existinginput newprogram, newindex
-data IntStream = Blocked (String, [Int], Int) | Ready (Int, String, [Int], [Int], Int) | Done deriving (Show, Eq)
+-- blocked: inputindex, program (to be modified at inputindex with the value), index
+-- ready: outputvalue, newprogram, newindex
+data IntStream = Blocked (Int, [Int], Int) | Ready (Int, [Int], Int) | Done deriving (Show, Eq)
 
-intcode :: String -> [Int] -> [Int] -> Int -> IntStream
-intcode name input program index =
+intcode :: [Int] -> Int -> IntStream
+intcode program index =
     let (op, mode1:mode2:_) = parseOpcode $ program !! index
         arg :: Mode -> Int -> Int
         arg mode offset =
@@ -26,28 +26,24 @@ intcode name input program index =
                             Address -> program !! immediate
     in case op of
            -- add
-           1 -> intcode name input newprogram $ index + 4
+           1 -> intcode newprogram $ index + 4
                     where newprogram = set (arg Immediate 3) (arg mode1 1 + arg mode2 2) program
            -- mul
-           2 -> intcode name input newprogram $ index + 4
+           2 -> intcode newprogram $ index + 4
                     where newprogram = set (arg Immediate 3) (arg mode1 1 * arg mode2 2) program
            -- input
-           3 -> case input of
-                    [] -> Blocked (name, program, index)
-                    -- (x:rest) -> traceShow (name ++ " <- " ++ show x) $ intcode name rest (set (arg Immediate 1) x program) $ index + 2
-                    (x:rest) -> intcode name rest (set (arg Immediate 1) x program) $ index + 2
+           3 -> Blocked (arg Immediate 1, program, index + 2)
            -- output
-           -- 4 -> intcode name input (arg mode1 1 : output) program $ index + 2
-           4 -> Ready (arg mode1 1, name, input, program, index + 2)
+           4 -> Ready (arg mode1 1, program, index + 2)
            -- jump if true
-           5 -> intcode name input program $ if arg mode1 1 /= 0 then arg mode2 2 else index + 3
+           5 -> intcode program $ if arg mode1 1 /= 0 then arg mode2 2 else index + 3
            -- jump if false
-           6 -> intcode name input program $ if arg mode1 1 == 0 then arg mode2 2 else index + 3
+           6 -> intcode program $ if arg mode1 1 == 0 then arg mode2 2 else index + 3
            -- less than
-           7 -> intcode name input newprogram $ index + 4
+           7 -> intcode newprogram $ index + 4
                     where newprogram = set (arg Immediate 3) (if arg mode1 1 < arg mode2 2 then 1 else 0) program
            -- equals
-           8 -> intcode name input newprogram $ index + 4
+           8 -> intcode newprogram $ index + 4
                     where newprogram = set (arg Immediate 3) (if arg mode1 1 == arg mode2 2 then 1 else 0) program
            -- halt
            99 -> Done
@@ -72,57 +68,34 @@ intcode name input program index =
 --         oute = intcode "e" (e:outd) [] program 0
 --     in last $ oute
 
-isThreadReady (_,(_,_,_,Ready _)) = True
-isThreadReady (_,(_,_,_,_)) = False
-
-isThreadBlockedWithInput (_,(_,(input:rest),_,Blocked _)) = True
-isThreadBlockedWithInput (_,(_,_,_,_)) = False
-
+-- index of other thread to input from / input buffer / output buffer / execution state
 type Thread = (Int, [Int], [Int], IntStream)
 
-executeThreads :: [Thread] -> Int
-executeThreads [(4,_,_,Done),(0,_,_,Done),(1,_,_,Done),(2,_,_,Done),(3,_,answer:_,Done)] = answer
-executeThreads threads =
-    case find isThreadReady $ zip [0..] threads of
-        -- TODO: find blocked threads and feed it input
-        Nothing -> case find isThreadBlockedWithInput $ zip [0..] threads of
-                       Nothing -> error "deadlock"
-                       Just (thisTid, (thisInputTid, thisInput, thisOutput, Blocked (name, program, index))) ->
-                           let newthisthread = (thisInputTid, [], thisOutput, intcode name thisInput program index)
-                               replacethread (tid, thread) | tid == thisTid = newthisthread
-                               replacethread (tid, thread) = thread
-                               newallthreads = map replacethread $ zip [0..] threads
-                           in executeThreads newallthreads
-        -- unused values: this threads inputting thread, this threads buffered input
-        Just (thisTid, (thisInputTid, thisInput, thisOutput, Ready (val, name, existingInput, program, newindex))) ->
-            -- find the thread whats blocked on this one's output
-            let otherthread = fromJust $ find (\(_,(otherInputTid,_,_,_)) -> otherInputTid == thisTid) $ zip [0..] threads
-                (otherTid, (_, otherinput, otheroutput, otherstate)) = otherthread
-                -- add this threads value into that threads buffer (at the end, ofc)
-                newotherthread :: Thread
-                newotherthread = (thisTid, otherinput ++ [val], otheroutput, otherstate)
-                -- execute this thread again
-                -- TODO: get rid of 'existingInput' - just let it block *always* on input opcode,
-                -- and let the scheduler feed it
-                newthisthread :: Thread
-                newthisthread = (thisInputTid, thisInput, val:thisOutput, intcode name existingInput program newindex)
-                replacethread (tid, thread) | tid == thisTid = newthisthread
-                replacethread (tid, thread) | tid == otherTid = newotherthread
-                replacethread (tid, thread) = thread
-                newallthreads = map replacethread $ zip [0..] threads
-            in executeThreads newallthreads
-        Just (_,(_,_,_, asdf)) -> error $ "impossible " ++ show asdf
+run :: [Thread] -> Int
+run [(4,_,_,Done),(0,_,_,Done),(1,_,_,Done),(2,_,_,Done),(3,_,answer:_,Done)] = answer
+run threads = schedule (find isThreadReady $ zip [0..] threads) (find isThreadBlockedWithInput $ zip [0..] threads)
+    where isThreadReady (_,(_,_,_,Ready _)) = True
+          isThreadReady (_,(_,_,_,_)) = False
+          isThreadBlockedWithInput (_,(_,(input:rest),_,Blocked _)) = True
+          isThreadBlockedWithInput (_,(_,_,_,_)) = False
+          schedule (Just (thisTid, (thisInputTid, thisInput, thisOutput, Ready (val, program, newindex)))) _ =
+              let -- find the thread whats blocked on this one's output
+                  otherthread = fromJust $ find (\(_,(otherInputTid,_,_,_)) -> otherInputTid == thisTid) $ zip [0..] threads
+                  (otherTid, (_, otherinput, otheroutput, otherstate)) = otherthread
+                  -- add this threads value into that threads buffer (at the end, ofc)
+                  newotherthread = (thisTid, otherinput ++ [val], otheroutput, otherstate)
+                  -- execute this thread again
+                  newthisthread = (thisInputTid, thisInput, val:thisOutput, intcode program newindex)
+              in run $ set thisTid newthisthread $ set otherTid newotherthread threads
+          schedule _ (Just (thisTid, (thisInputTid, (val:rest), thisOutput, Blocked (inputindex, program, index)))) =
+              let -- feed existing input to the blocked program
+                  newprogram = set inputindex val program
+                  newthisthread = (thisInputTid, rest, thisOutput, intcode newprogram index)
+              in run $ set thisTid newthisthread threads
+          schedule Nothing Nothing = error "deadlock"
 
-amplify program [a,b,c,d,e] =
-    let proga = intcode "a" [a,0] program 0
-        progb = intcode "b" [b] program 0
-        progc = intcode "c" [c] program 0
-        progd = intcode "d" [d] program 0
-        proge = intcode "e" [e] program 0
-        -- index of other thread to input from / input buffers / output / thread states
-        threads = [(4,[],[],proga), (0,[],[],progb), (1,[],[],progc), (2,[],[],progd), (3,[],[],proge)]
-    in executeThreads threads
-
+amplify program [a,b,c,d,e] = run [(4,[a,0],[],p), (0,[b],[],p), (1,[c],[],p), (2,[d],[],p), (3,[e],[],p)]
+    where p = intcode program 0
 
 main = do input <- map read <$> words <$> readFile "input.txt"
           print $ maximum $ map (amplify input) $ permutations [0..4]
