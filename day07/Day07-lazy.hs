@@ -52,7 +52,7 @@ amplify program [a,b,c,d,e] =
         outc = intcode (c:outb) program 0
         outd = intcode (d:outc) program 0
         oute = intcode (e:outd) program 0
-    in last $ oute
+    in last oute
 
 main = do input <- map read <$> words <$> readFile "input.txt"
           print $ maximum $ map (amplify input) $ permutations [0..4]
