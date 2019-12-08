@@ -1,39 +1,18 @@
-{-# LANGUAGE FlexibleContexts, TupleSections, MonadComprehensions #-}
-import qualified Data.Map as M
-import qualified Data.Set as S
 import Data.List
-import Data.Maybe
-import Data.Char
-import Data.Ord
-import Control.Monad.State
-import Control.Arrow
-import Debug.Trace
 import Data.List.Split
+import Data.Ord
 
 width = 25
 height = 6
+size = width * height
 
--- solve :: [Int] -> Int
--- solve nums =
---     let numlayers = length nums `div` (width * height)
---         layers = chunksOf (width * height) nums
---         layerswithzeroes = map (\layer -> ((length $ filter (==0) layer), layer)) layers
---         minzeroes = snd $ minimumBy (comparing fst) layerswithzeroes
---     in (length (filter (==1) minzeroes) * length (filter (==2) minzeroes))
+part1 input = length (filter (=='1') minzeroes) * length (filter (=='2') minzeroes)
+    where minzeroes = minimumBy (comparing (length . filter (=='0'))) input
 
-asdf 2 x = x
-asdf z x = z
-merge image layer = zipWith asdf image layer
+part2 input = chunksOf width $ foldl (zipWith merge) (replicate size '2') input
+    where merge '2' y = y
+          merge x y = x
 
-solve :: [Int] -> [[Int]]
-solve nums =
-    let layers = chunksOf (width * height) nums
-        alltransp = replicate (width * height) 2
-    in chunksOf width $ foldl merge alltransp layers
-
-        
-
-main = do input <- head <$> lines <$> readFile "input.txt"
-          let nums = map read $ map (\c -> [c]) input
-          -- print $ solve nums
-          mapM_ print $ solve nums
+main = do input <- chunksOf size <$> head <$> lines <$> readFile "input.txt"
+          print $ part1 input
+          mapM_ putStrLn $ part2 input
