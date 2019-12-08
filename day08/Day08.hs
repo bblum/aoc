@@ -9,7 +9,7 @@ size = width * height
 part1 input = length (filter (=='1') minzeroes) * length (filter (=='2') minzeroes)
     where minzeroes = minimumBy (comparing (length . filter (=='0'))) input
 
-part2 input = chunksOf width $ foldl (zipWith merge) (replicate size '2') input
+part2 input = chunksOf width $ foldl (zipWith merge) (repeat '2') input
     where merge '2' y = y
           merge x y = x
 
