@@ -9,8 +9,9 @@ gravity [pos,vel] [from,_] = [pos, zipWith3 pull from pos vel]
 step moons = map velocity [ foldl gravity moon moons | moon <- moons ]
     where velocity [pos,vel] = [zipWith (+) pos vel, vel]
 
-solve axis = fst $ fromJust $ find (seen axis) $ zip [1..] $ tail $ iterate step moons
-    where seen axis (_,newmoons) = map (map (!! axis)) moons == map (map (!! axis)) newmoons
+solve axis = fst $ fromJust $ find seen $ zip [1..] $ tail $ iterate step moons
+    where seen (_,newmoons) = project moons == project newmoons
+          project = map $ map (!! axis)
 
 main = do print $ sum $ map (product . map (sum . map abs)) $ iterate step moons !! 1000
           print $ foldl1 lcm $ map solve [0..2]
