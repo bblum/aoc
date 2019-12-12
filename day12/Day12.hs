@@ -13,4 +13,4 @@ solve axis = fst $ fromJust $ find (seen axis) $ zip [1..] $ tail $ iterate step
     where seen axis (_,newmoons) = map (map (!! axis)) moons == map (map (!! axis)) newmoons
 
 main = do print $ sum $ map (product . map (sum . map abs)) $ iterate step moons !! 1000
-          print $ foldl lcm 1 $ map solve [0..2]
+          print $ foldl1 lcm $ map solve [0..2]
