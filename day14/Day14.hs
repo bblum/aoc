@@ -45,22 +45,22 @@ solve result excess ((quantity,goal):goals) recipes =
 
 part1 n recipes = solve 0 [] [(n,"FUEL")] recipes
 
--- found answer
-part2 goal lower_bound (Just upper_bound) recipes | lower_bound + 1 == upper_bound = lower_bound
-part2 goal lower_bound (Just upper_bound) recipes =
-    -- search the interval with normal binary search
+-- search the interval with normal binary search
+part2b goal lower_bound upper_bound recipes | lower_bound + 1 == upper_bound = lower_bound
+part2b goal lower_bound upper_bound recipes =
     let midpoint = div (lower_bound + upper_bound) 2
     in if part1 midpoint recipes > goal then
-           part2 goal lower_bound (Just midpoint) recipes
+           part2b goal lower_bound midpoint recipes
        else
-           part2 goal midpoint (Just upper_bound) recipes
-part2 goal lower_bound Nothing recipes =
-    -- try to find an upper bound with exponential binary search
+           part2b goal midpoint upper_bound recipes
+
+-- try to find an upper bound with exponential binary search
+part2 goal lower_bound recipes =
     if part1 (lower_bound * 2) recipes > goal then
-        part2 goal lower_bound (Just $ lower_bound * 2) recipes
+        part2b goal lower_bound (lower_bound * 2) recipes
     else
-        part2 goal (lower_bound * 2) Nothing recipes
+        part2 goal (lower_bound * 2) recipes
 
 main = do recipes <- map parse <$> lines <$> readFile "input.txt"
           print $ part1 1 $ M.fromList recipes
-          print $ part2 1000000000000 1 Nothing $ M.fromList recipes
+          print $ part2 1000000000000 1 $ M.fromList recipes
