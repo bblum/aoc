@@ -1,7 +1,7 @@
 import Data.List.Split
 
-solve input (dx,dy) = length $ filter tree $ zip [0..] $ map head $ chunksOf dy input
-    where tree (y, line) = line !! (y * dx `mod` length line) == '#'
+solve input (dx,dy) = length $ filter tree $ zip [0..] $ chunksOf dy input
+    where tree (y, line:_) = line !! (y * dx `mod` length line) == '#'
 
 main = do input <- lines <$> readFile "input.txt"
           print $ solve input (3,1)
