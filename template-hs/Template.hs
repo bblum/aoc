@@ -10,7 +10,7 @@ import Control.Monad.State
 import Control.Arrow
 import Debug.Trace
 
-parse = id
+parse = words
 
-main = do input <- map (parse . words) <$> lines <$> readFile "input.txt"
+main = do input <- map parse <$> lines <$> readFile "input.txt"
           print 42
