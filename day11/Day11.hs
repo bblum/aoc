@@ -7,14 +7,16 @@ coordify input = M.fromList $ concat $ map repair $ zip [0..] $ map (zip [0..]) 
 count f = length . filter f
 occupied = count (== '#')
 
+nbrs (y,x) = [(y2,x2) | y2 <- [y-1..y+1], x2 <- [x-1..x+1], (y2,x2) /= (y,x)]
+
 step f n input = M.mapWithKey stepcell input
     where stepcell yx '.' = '.'
           stepcell yx 'L' = if f input yx == 0 then '#' else 'L'
           stepcell yx '#' = if f input yx >= n then 'L' else '#'
 
-adjacent input (y,x) = occupied $ mapMaybe (flip M.lookup input) [(y2,x2) | y2 <- [y-1..y+1], x2 <- [x-1..x+1], (y2,x2) /= (y,x)]
+adjacent input yx = occupied $ mapMaybe (flip M.lookup input) $ nbrs yx
 
-visible input yx = count (look yx) [(dy,dx) | dy <- [-1..1], dx <- [-1..1], (dy,dx) /= (0,0)]
+visible input yx = count (look yx) $ nbrs (0,0)
     where look (y,x) (dy,dx) = case M.lookup newyx input of
               Just '#' -> True
               Just '.' -> look newyx (dy,dx)
