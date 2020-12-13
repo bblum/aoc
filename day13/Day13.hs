@@ -14,9 +14,8 @@ part1 input = (time - start) * bus
           (bus,time) = minimumBy (comparing snd) $ zip buses $ map bustime buses
 
 part2 input = fst $ foldl crt (0,1) $ filter ((>0) . fst) $ zip input [0..]
-    where crt (base,step) (bus,offset) = (newbase,next-newbase)
+    where crt (base,step) (bus,offset) = (head $ filter ok [base,base+step..], lcm bus step)
               where ok t = mod t bus == mod (bus - offset) bus
-                    (newbase:next:_) = filter ok [base,base+step..]
 
 main = do print $ part1 input
           print $ part2 sample1 -- 1068781
