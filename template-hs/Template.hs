@@ -11,10 +11,8 @@ import Control.Monad.State
 import Control.Arrow
 import Debug.Trace
 
-dyxs8 = [(dy,dx) | dy <- [-1..1], dx <- [-1..1], (dy,dx) /= 0]
-dyxs4 = [(-1,0),(1,0),(0,-1),(0,1)]
-fnbrs8 (y,x) = map (\(dy,dx) -> (y+dy,x+dx)) dyxs8
-fnbrs4 (y,x) = map (\(dy,dx) -> (y+dy,x+dx)) dyxs4
+fnbrs8 (y,x) = [(y2,x2) | y2 <- [y-1..y+1], x2 <- [x-1..x+1], (y2,x2) /= (y,x)]
+fnbrs4 (y,x) = [(y-1,x), (y+1,x), (y,x-1), (y,x+1)]
 
 parse = words
 
