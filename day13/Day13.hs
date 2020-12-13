@@ -9,11 +9,10 @@ part1 = (time - start) * bus
           bustime b = (1 + div start b) * b
           (bus,time) = minimumBy (comparing snd) $ zip buses $ map bustime buses
 
-part2 = fst $ foldl asdf (0,1) schedule
+part2 = fst $ foldl crt (0,1) schedule
     where schedule = filter ((>0) . fst) $ zip input [0..]
-          asdf (base,step) (bus,offset) = (newbase, next - newbase)
-              where works t = mod t bus == mod (bus - offset) bus
-                    (newbase:next:_) = filter works [base,base+step..]
+          crt (base,step) (bus,offset) = (head $ filter ok [base,base+step..], bus * step)
+              where ok t = mod t bus == mod (bus - offset) bus
 
 main = do print part1
           print part2
