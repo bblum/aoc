@@ -4,14 +4,13 @@ import Data.List
 count = length . filter (== '#')
 
 expand [los,his] = sequence [[lo-1..hi+1] | (lo,hi) <- zip los his]
-neighbors coord = expand [coord,coord] \\ [coord]
 
 coordify pfx = M.fromList . concat . zipWith (\y -> zipWith (\x c -> (pfx ++ [y,x],c)) [0..]) [0..]
 
-step state = M.fromList [(p, rule (get p) (count $ map get $ neighbors p)) | p <- expand bounds]
+step state = M.fromList [(p, rule (get p) (count $ map get $ expand [p,p])) | p <- expand bounds]
     where bounds = map ($ transpose $ M.keys state) [map minimum, map maximum]
           get p = maybe '.' id $ M.lookup p state
-          rule '#' 2 = '#'
+          rule '#' 4 = '#'
           rule _ 3 = '#'
           rule _ _ = '.'
 
