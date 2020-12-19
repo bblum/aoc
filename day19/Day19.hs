@@ -4,10 +4,9 @@ data Rule = Leaf String | Seq Rule Rule | Or Rule Rule
 
 match (Leaf s) line = [tail line | isPrefixOf s line]
 match (Or r1 r2) line = match r1 line ++ match r2 line
-match (Seq r1 r2) line = concat [match r2 rest | rest <- match r1 line]
+match (Seq r1 r2) line = match r1 line >>= match r2
 
-main = do input <- lines <$> readFile "input.txt"
-          print $ length $ filter (any (== "") . match r0) input
+main = print =<< length <$> filter (any (== "") . match r0) <$> lines <$> readFile "input.txt"
 
 x +++ y = Seq x y
 x ||| y = Or x y
