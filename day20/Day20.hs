@@ -2,29 +2,28 @@ import Data.List
 import Data.List.Split
 import Data.Maybe
 
-parse (title:rest) = (read (last $ words title) :: Int, rest)
+type Tile = (Int, [String])
+type Square = [String]
+type Row = [Square]
+type Grid = [Row]
 
-rm i tiles = filter ((/= i) . fst) tiles
+parse (title:rest) = (read $ last $ words title, rest)
+
+rm i = filter ((/= i) . fst)
+
+-- returns all 8 ways to rotate and or reflect a tile
+flipify :: Square -> [Square]
+flipify tile = noobs ++ map transpose noobs
+    where noobs = map ($ tile) [id, reverse, map reverse, reverse . map reverse]
 
 -- part 1
 
 corner :: [Tile] -> Tile -> Bool
 corner input (i,tile) = length (filter (flip elem others) $ edges tile) == 4
     where others = concatMap edges $ map snd $ rm i input
-          edges tile = es ++ map reverse es
-              where es = map ($ tile) [head, last, head . transpose, last . transpose]
+          edges = map head . flipify
 
 -- part 2
-
-type Tile = (Int, [String])
-type Square = [String]
-type Row = [Square]
-type Grid = [Row]
-
--- returns all 8 ways to rotate and or reflect a tile
-flipify :: Square -> [Square]
-flipify tile = map ($ tile) $ noobs ++ map (. transpose) noobs
-    where noobs = [id, reverse, map reverse, reverse . map reverse]
 
 -- finds the next tile that fits the specified edge and returns it already prerotated for ya
 -- the next tile must match under the given `flip_fn`, e.g. for `id`, the top edge must match
@@ -53,11 +52,11 @@ mosntex = ["                  # ",
            "#    ##    ##    ###",
            " #  #  #  #  #  #   "]
 
-count_mosn picture = sum [ 1 | y <- [0..pix_y-mosn_y], x <- [0..pix_x-mosn_x], mosn_at y x]
+count_mosn picture = sum [ 1 | y <- [0..pix_h-mosn_h], x <- [0..pix_w-mosn_w], mosn_at y x]
     where dims p = (length p, length $ head p)
-          (mosn_y,mosn_x) = dims mosntex
-          (pix_y,pix_x) = dims picture
-          mosn_at y x = match_mosn $ map (take mosn_x . drop x) $ take mosn_y $ drop y picture
+          (mosn_h,mosn_w) = dims mosntex
+          (pix_h,pix_w) = dims picture
+          mosn_at y x = match_mosn $ map (take mosn_w . drop x) $ take mosn_h $ drop y picture
           match_mosn cropped = all match_char $ zip (concat cropped) (concat mosntex)
           match_char (p,m) = p == '#' || m == ' '
 
