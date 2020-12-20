@@ -1,115 +1,74 @@
-{-# LANGUAGE FlexibleContexts, TupleSections, MonadComprehensions #-}
-import qualified Data.Map as M
-import qualified Data.Set as S
 import Data.List
 import Data.List.Split
-import Data.Either
 import Data.Maybe
-import Data.Char
-import Data.Ord
-import Control.Monad.State
-import Control.Arrow
-import Debug.Trace
 
-fnbrs8 (y,x) = [(y2,x2) | y2 <- [y-1..y+1], x2 <- [x-1..x+1], (y2,x2) /= (y,x)]
-fnbrs4 (y,x) = [(y-1,x), (y+1,x), (y,x-1), (y,x+1)]
-
-parse :: [String] -> (Int, [String])
 parse (title:rest) = (read (last $ words title) :: Int, rest)
 
-edges group = map (\edge -> [edge, reverse edge]) es
-    where es = [head group, last group, head $ transpose group, last $ transpose group]
+rm i tiles = filter ((/= i) . fst) tiles
 
-mapify m (i,group) = M.union m $ M.fromList $ map (\edge -> (edge, group)) $ concat $ edges group
+-- part 1
 
-iscorner input (i,group) = length (filter testedge $ edges group) == 2
-    where testedge [edge,redge] = M.member edge m || M.member redge m
-          m = foldl mapify M.empty $ filter ((/=i) . fst) input
+corner :: [Tile] -> Tile -> Bool
+corner input (i,tile) = length (filter (flip elem others) $ edges tile) == 4
+    where others = concatMap edges $ map snd $ rm i input
+          edges tile = es ++ map reverse es
+              where es = map ($ tile) [head, last, head . transpose, last . transpose]
 
--- all that is craperino
+-- part 2
 
 type Tile = (Int, [String])
+type Square = [String]
+type Row = [Square]
+type Grid = [Row]
 
-validate tiles (i,group) = map (\edge -> length $ filter (anyedge edge) rest) thisedges
-    where rest = filter ((/=i) . fst) tiles
-          thisedges = map head $ edges group
-          anyedge edge (_,other) = elem edge $ concat $ edges other
-
-baleet i tiles = filter ((/= i) . fst) tiles
-
-flip_ops :: [[String] -> [String]]
-flip_ops = noobs ++ map (\f -> f . transpose) noobs
+-- returns all 8 ways to rotate and or reflect a tile
+flipify :: Square -> [Square]
+flipify tile = map ($ tile) $ noobs ++ map (. transpose) noobs
     where noobs = [id, reverse, map reverse, reverse . map reverse]
 
--- if is_vertical than were looking for edge to be == head $ transpose tile
-find_puzzle :: [Tile] -> String -> Bool -> Maybe Tile
-find_puzzle tiles edge is_vertical = case mapMaybe match candidates of x:_ -> Just x; [] -> Nothing
-    where need_matching_edge tile = head $ if is_vertical then transpose tile else tile
-          -- tile is already transposed by now, or not
-          -- check left side of tile
-          match (i,tile) = if edge == need_matching_edge tile then Just (i,tile) else Nothing
-          candidates = concatMap (\(i,tile) -> map (i,) $ map ($ tile) flip_ops) tiles
+-- finds the next tile that fits the specified edge and returns it already prerotated for ya
+-- the next tile must match under the given `flip_fn`, e.g. for `id`, the top edge must match
+puzzlify :: (Square -> Square) -> [Tile] -> String -> Maybe Tile
+puzzlify flip_fn tiles edge = find match [(i,rt) | (i,t) <- tiles, rt <- flipify t]
+    where match (_,tile) = edge == head (flip_fn tile)
 
--- nb to print the potutput row, transpose it
--- do this after grabbing the bottom tile
-mkrow row tiles = ans $ find_puzzle tiles right_edge True
-    where right_edge = last $ transpose $ head row -- still order top->bottom
-          ans (Just (i, other)) = mkrow (other:row) $ baleet i tiles
-          ans Nothing = (reverse row, tiles)
+-- builds a row rightwards from the available tile until it hits an edge
+-- the starting tile of the row must already be specified so it should probs be a left edge
+-- nb to turn the row into a serviceable part of the full picture, transpose it
+mkrow row tiles = case puzzlify transpose tiles $ last $ transpose $ head row of
+    Just (i,tile) -> mkrow (tile:row) $ rm i tiles
+    Nothing -> (reverse row, tiles)
 
-mkpicture :: [ [[String]] ] -> [Tile] -> [[[String]]]
-mkpicture (row:prev_rows) [] = reverse (row:prev_rows) -- out of tiles must be done
-mkpicture (row:prev_rows) tiles = mkpicture (newrow:row:prev_rows) newtiles
-    where joiner :: String
-          joiner = last $ head row
-          Just next_first_noob = find_puzzle tiles joiner False -- must existerino
-          (newrow, newtiles) = mkrow [snd next_first_noob] $ baleet (fst next_first_noob) tiles
+-- like mkrow but builds the whole dang picture, obvs
+mkpicture :: Grid -> [Tile] -> Square
+mkpicture grid [] = glue $ map transpose $ strip $ reverse grid -- out of tiles must be done
+    where strip = map $ map $ map strip_line . strip_line
+          strip_line = reverse . tail . reverse . tail
+          glue = concatMap $ map concat
+mkpicture grid tiles = mkpicture (newrow:grid) newtiles
+    where Just (i,first_noob) = puzzlify id tiles $ last $ head $ head grid
+          (newrow,newtiles) = mkrow [first_noob] $ rm i tiles
 
-pretty picture = map transpose picture
+mosntex = ["                  # ",
+           "#    ##    ##    ###",
+           " #  #  #  #  #  #   "]
 
-strip :: [[[String]]] -> [[[String]]]
-strip picture = map striprow picture
-    where striprow :: [[String]] -> [[String]]
-          striprow row = map striptile row
-          striptile :: [String] -> [String]
-          striptile tile = map stripsides $ reverse $ tail $ reverse $ tail tile
-          stripsides :: String -> String
-          stripsides line = reverse $ tail $ reverse $ tail line
-          
-glue picture = concatMap gluerow picture
-    where gluerow row = map glueline row
-          glueline line = concat line
+count_mosn picture = sum [ 1 | y <- [0..pix_y-mosn_y], x <- [0..pix_x-mosn_x], mosn_at y x]
+    where dims p = (length p, length $ head p)
+          (mosn_y,mosn_x) = dims mosntex
+          (pix_y,pix_x) = dims picture
+          mosn_at y x = match_mosn $ map (take mosn_x . drop x) $ take mosn_y $ drop y picture
+          match_mosn cropped = all match_char $ zip (concat cropped) (concat mosntex)
+          match_char (p,m) = p == '#' || m == ' '
 
-mosntex = ["                  # ", "#    ##    ##    ###", " #  #  #  #  #  #   "]
-
-count_mosntexs picture = sum [ 1 | y <- [0..maxy], x <- [0..maxx], mosntex_at y x]
-    where maxy = length picture - length mosntex
-          maxx = length (head picture) - length (head mosntex)
-          mosntex_at y x = match_mosntex $ map (take (length $ head mosntex)) $ take (length mosntex) $ drop y $ map (drop x) picture
-          match_mosntex cropped = all match_char $ zip (concat cropped) (concat mosntex)
-          match_char ('#',_) = True
-          match_char (_,' ') = True
-          match_char ('.','#') = False
-
-solve picture = num_water - (size_mosn * num_mosn)
-    where num_water = length $ filter (== '#') $ concat picture
-          size_mosn = length $ filter (== '#') $ concat mosntex
-          num_mosn = maximum $ map count_mosntexs $ map ($ picture) flip_ops
+solve picture = count picture - (count mosntex * maximum (map count_mosn $ flipify picture))
+    where count = length . filter (== '#') . concat
 
 main = do tiles <- map parse <$> splitOn [""] <$> lines <$> readFile "input.txt"
-          -- print $ head tiles
-          -- let m = foldl mapify M.empty tiles
-          -- mapM print $ M.keys m
-          let corners = filter (iscorner tiles) tiles
-          mapM print $ map reverse $ snd $ head corners
+          let corners = filter (corner tiles) tiles
           print $ product $ map fst $ corners
-          --
-          print $ map (validate tiles) tiles
-          let first_noob = head corners
-          let (first_row, newtiles) = mkrow [map reverse $ snd first_noob] $ baleet (fst first_noob) tiles
-          let picture = glue $ pretty $ strip $ mkpicture [first_row] newtiles
-          -- print $ strip $ [[ ["abcd","efgh","ijkl","mnop"] ]]
-          print $ solve picture
-          -- 
-          testpicture <- lines <$> readFile "testpicture.txt"
-          print $ solve testpicture
+          let (i,first_noob) = head corners
+          -- trial and error determined `map reverse` is the right flip_op to start with
+          -- cba to implement logic to figure that out all jidou-teki style
+          let (first_row, newtiles) = mkrow [map reverse first_noob] $ rm i tiles
+          print $ solve $ mkpicture [first_row] newtiles
