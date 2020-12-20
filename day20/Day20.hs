@@ -1,6 +1,7 @@
 import Data.List
 import Data.List.Split
 import Data.Maybe
+import Control.Monad
 
 type Tile = (Int, [String])
 type Square = [String]
@@ -13,8 +14,7 @@ rm i = filter ((/= i) . fst)
 
 -- returns all 8 ways to rotate and or reflect a tile
 flipify :: Square -> [Square]
-flipify tile = noobs ++ map transpose noobs
-    where noobs = map ($ tile) [id, reverse, map reverse, reverse . map reverse]
+flipify tile = map (foldr ($) tile) $ filterM (const [True,False]) [reverse, map reverse, transpose]
 
 -- part 1
 
@@ -60,8 +60,8 @@ count_mosn picture = sum [ 1 | y <- [0..pix_h-mosn_h], x <- [0..pix_w-mosn_w], m
           match_mosn cropped = all match_char $ zip (concat cropped) (concat mosntex)
           match_char (p,m) = p == '#' || m == ' '
 
-solve picture = count picture - (count mosntex * maximum (map count_mosn $ flipify picture))
-    where count = length . filter (== '#') . concat
+solve picture = size picture - size mosntex * maximum (map count_mosn $ flipify picture)
+    where size = length . filter (== '#') . concat
 
 main = do tiles <- map parse <$> splitOn [""] <$> lines <$> readFile "input.txt"
           let corners = filter (corner tiles) tiles
