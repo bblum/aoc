@@ -1,37 +1,15 @@
-{-# LANGUAGE FlexibleContexts, TupleSections, MonadComprehensions #-}
 import qualified Data.Map as M
-import qualified Data.Set as S
-import Data.List
-import Data.List.Split
-import Data.Either
-import Data.Maybe
-import Data.Char
-import Data.Ord
-import Control.Monad.State
-import Control.Arrow
-import Debug.Trace
 
 input = [5,8,3,9,7,6,2,4,1]
 
-test = [3,8,9,1,2,5,4,6,7]
+crab (c0, cups) = (cups2 M.! c0, cups2)
+    where [c1,c2,c3,c4] = map (cups M.!) [c0,c1,c2,c3]
+          dest c0 = if elem d [c1,c2,c3] then dest d else d
+              where d = mod (c0-2) (M.size cups) + 1
+          cups2 = foldr (uncurry M.insert) cups [(c0,c4),(dest c0,c1),(c3,cups M.! dest c0)]
 
-splitAfter n list = (take (idx+1) list, drop (idx+1) list)
-    where idx = fst $ head $ filter ((== n) . snd) $ zip [0..] list
+solve p n k = take p $ tail $ iterate (snd (iterate crab (head l, M.fromList $ zip (last l:l) l) !! k) M.!) 1
+    where l = input ++ [10..n]
 
-move (c:cups) = traceShow (current, dest, "part2 hint", take 2 after1) $ ans
-    where cups2 = cups ++ [c]
-          (next, rest) = (take 3 cups2, drop 3 cups2)
-          current = c
-          dest = case filter (< c) rest of
-                     [] -> maximum rest -- wrap around
-                     ok -> maximum ok -- take biggest not exceeding
-          (pfx,sfx) = splitAfter dest rest
-          newcups = pfx ++ next ++ sfx
-          (pfx2,sfx2) = splitAfter (c) newcups
-          ans = sfx2 ++ pfx2
-          (_,after1) = splitAfter 1 ans
-
-main = do --
-          -- print $ iterate move input !! 100
-          let input2 = take 1000000 $ input ++ (drop (length input) [1..])
-          print $ iterate move input2 !! 10000000
+main = do putStrLn $ concatMap show $ solve 8 9 100
+          print $ product $ solve 2 1000000 10000000
