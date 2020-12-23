@@ -9,38 +9,33 @@ fn find_dest(current: usize, max: usize, taken: &[usize]) -> usize {
     }
 }
 
-fn crab(next_cups: &mut [usize], current: usize) -> usize {
-    let cup1 = next_cups[current];
-    let cup2 = next_cups[cup1];
-    let cup3 = next_cups[cup2];
-    next_cups[current] = next_cups[cup3];
-
-    let dest = find_dest(current, next_cups.len()-1, &[cup1, cup2, cup3]);
-    next_cups[cup3] = next_cups[dest];
-    next_cups[dest] = cup1;
-
-    next_cups[current]
-}
-
 fn run(max: usize, steps: usize) -> Vec<usize> {
-    fn sequence(i: usize) -> usize { if i <= 9 { INPUT[i-1] } else { i } }
-
     let mut next_cups = vec![0; max+1];
     let mut current = INPUT[0];
 
-    for i in 1..=max {
-        next_cups[sequence(i)] = if i == max { current } else { sequence(i+1) };
+    let mut sequence = INPUT.iter().cloned().chain(10..=max).peekable();
+    while let Some(i) = sequence.next() {
+        next_cups[i] = *sequence.peek().unwrap_or(&current);
     }
 
     for _ in 0..steps {
-        current = crab(&mut next_cups, current);
+        let cup1 = next_cups[current];
+        let cup2 = next_cups[cup1];
+        let cup3 = next_cups[cup2];
+        next_cups[current] = next_cups[cup3];
+
+        let dest = find_dest(current, max, &[cup1, cup2, cup3]);
+        next_cups[cup3] = next_cups[dest];
+        next_cups[dest] = cup1;
+
+        current = next_cups[current];
     }
 
     next_cups
 }
 
 fn main() {
-    let part1 = run(INPUT.len(), 100);
+    let part1 = run(9, 100);
     let mut i = 1;
     for i in std::iter::from_fn(|| { i = part1[i]; if i == 1 { None } else { Some(i) } }) {
         print!("{}", i);
