@@ -27,12 +27,9 @@ fn run(max: usize, steps: usize) -> Vec<usize> {
 
     let mut next_cups = vec![0; max+1];
     let mut current = INPUT[0];
-    let mut prev = sequence(max);
 
     for i in 1..=max {
-        let n = sequence(i);
-        next_cups[prev] = n;
-        prev = n;
+        next_cups[sequence(i)] = if i == max { current } else { sequence(i+1) };
     }
 
     for _ in 0..steps {
