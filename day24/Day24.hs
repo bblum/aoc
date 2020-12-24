@@ -1,17 +1,16 @@
 import qualified Data.Map as M
 
+count = length . filter id
+
+fnbrs6 (y,x) = [(y,x-2),(y,x+2),(y-1,x-1),(y-1,x+1),(y+1,x-1),(y+1,x+1)]
+
 parse (ns:ew:rest) | elem ns "ns" && elem ew "ew" = [ns,ew]:parse rest
 parse (x:rest) = [x]:parse rest
 parse [] = []
 
-fnbrs6 (y,x) = [(y,x-2),(y,x+2),(y-1,x-1),(y-1,x+1),(y+1,x-1),(y+1,x+1)]
-
 coord yx dir = (M.! dir) $ M.fromList $ zip ["w","e","nw","ne","sw","se"] $ fnbrs6 yx
 
 query m yx = maybe False id $ M.lookup yx m
-
-count = length . filter id
-
 toggle m yx = M.insert yx (not $ query m yx) m
 
 run m = M.fromList [((y,x), cell (y,x)) | y <- range ys 1, x <- range xs 2, mod (x+y) 2 == 0]
