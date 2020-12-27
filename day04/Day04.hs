@@ -7,7 +7,7 @@ parse input = map (map parseline) $ splitOn [""] input
 
 keys = ["byr","iyr","eyr","hgt","hcl","ecl","pid"]
 
-haskey l k = maybe False (const True) $ lookup k l
+haskey l k = not $ null $ lookup k l
 
 validkey l k = maybe False (check k) $ lookup k l
     where between v0 lower upper = let v = read v0 in v >= lower && v <= upper
