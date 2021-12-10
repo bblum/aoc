@@ -1,16 +1,15 @@
 import Data.List
 import Data.Maybe
 
-match '(' ')' = True
-match '[' ']' = True
-match '{' '}' = True
-match '<' '>' = True
-match _ _ = False
+match '(' = ')'
+match '[' = ']'
+match '{' = '}'
+match '<' = '>'
 
 parse stack (r:rest) | elem r "([{<" = parse (r:stack) rest
-parse (s:stack) (r:rest) = if match s r then parse stack rest else [r]
-parse [] (r:rest) = [r]
+parse (s:stack) (r:rest) | match s == r = parse stack rest
 parse stack [] = stack
+parse _ (r:rest) = [r]
 
 score ")" = 3
 score "]" = 57
