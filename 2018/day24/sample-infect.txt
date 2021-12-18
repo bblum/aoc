@@ -1,0 +1,2 @@
+801 4706 116 bludgeoning 1 weak radiation
+4485 2961 12 slashing 4 immune radiation weak fire cold

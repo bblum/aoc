@@ -1,0 +1,2 @@
+17 5390 4507 fire 2 weak radiation bludgeoning
+989 1274 25 slashing 3 immune fire weak bludgeoning slashing
