@@ -6,7 +6,6 @@ data Snailfish = L (Snailfish, Snailfish) | N Int deriving Eq
 
 explode d (N n) = Nothing
 explode 4 (L (N p, N q)) = Just (N 0, (p,q))
-explode 4 (L l) = error $ "too deep: "
 explode d (L (p, q)) = try 'l' p <|> try 'r' q
     where try c s = settle c <$> explode (d+1) s
           settle 'l' (p2, (l,r)) = (L (p2, add 'l' r q), (l,0))
