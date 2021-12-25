@@ -14,6 +14,8 @@ import Debug.Trace
 fnbrs8 (y,x) = [(y2,x2) | y2 <- [y-1..y+1], x2 <- [x-1..x+1], (y2,x2) /= (y,x)]
 fnbrs4 (y,x) = [(y-1,x), (y+1,x), (y,x-1), (y,x+1)]
 
+coordify = zipWith (\y -> zipWith ((,) . (y,)) [0..]) [0..]
+
 parse = words
 
 main = do input <- map parse <$> lines <$> readFile "input.txt"
