@@ -11,9 +11,7 @@ parse cwd dirmap (["$","ls"]:rest) = parse cwd (M.insert cwd (Left children) dir
           parsechild (dirmap,children) [size,filename] = (dirmap2,(filename:cwd):children)
               where dirmap2 = M.insert (filename:cwd) (Right $ read size) dirmap
 
-size dirmap cwd = case dirmap M.! cwd of
-    Right size -> size
-    Left children -> sum $ map (size dirmap) children
+size dirmap cwd = either (sum . map (size dirmap)) id $ dirmap M.! cwd
 
 main = do (["$","cd","/"]:input) <- map words <$> lines <$> readFile "input.txt"
           let dirmap = parse [] M.empty input
